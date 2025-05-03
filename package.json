@@ -1,0 +1,10 @@
+{
+  "name": "smartglot-static",
+  "version": "1.0.0",
+  "description": "Static site for Firebase App Hosting",
+  "main": "index.html",
+  "scripts": {},
+  "keywords": [],
+  "author": "",
+  "license": "ISC"
+} 
