@@ -1,10 +1,16 @@
 {
-  "name": "smartglot-static",
+  "name": "smartglot",
   "version": "1.0.0",
   "description": "Static site for Firebase App Hosting",
-  "main": "index.html",
-  "scripts": {},
+  "main": "index.js",
+  "scripts": {
+    "start": "node server.js",
+    "test": "echo \"Error: no test specified\" && exit 1"
+  },
   "keywords": [],
   "author": "",
-  "license": "ISC"
+  "license": "ISC",
+  "dependencies": {
+    "express": "^4.19.2"
+  }
 } 
