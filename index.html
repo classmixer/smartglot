@@ -2,10 +2,31 @@
 <html>
   <head>
     <title>Smartglot - Term Analysis</title>
+    <!-- TODO: Add Firebase SDK scripts here -->
+    <!-- Get these from your Firebase project settings -->
+    <script src="https://www.gstatic.com/firebasejs/9.6.7/firebase-app-compat.js"></script>
+    <script src="https://www.gstatic.com/firebasejs/9.6.7/firebase-auth-compat.js"></script>
+    <script>
+      // Firebase 구성
+      var firebaseConfig = {
+        apiKey: 'AIzaSyA0iVwY44v9lokoS2Zm_jl9pYc8pV6Nje8',
+        authDomain: 'smartglot.firebaseapp.com', 
+        projectId: 'smartglot',
+        storageBucket: 'smartglot.firebasestorage.app',
+        messagingSenderId: '516870202505',
+        appId: '1:516870202505:web:6d7753b2ae644def4e5258',
+      };
+
+      // Initialize Firebase
+      firebase.initializeApp(firebaseConfig);
+      const auth = firebase.auth();
+    </script>
+
     <style>
       /* Basic styling */
       body {
         font-family: sans-serif;
+        padding: 20px;
       }
       textarea {
         width: 80%;
@@ -15,12 +36,20 @@
       }
       button {
         padding: 10px 15px;
+        cursor: pointer;
+      }
+      input[type='email'],
+      input[type='password'] {
+        padding: 8px;
+        margin-right: 5px;
+        margin-bottom: 10px; /* Add space below inputs */
       }
       #results {
         margin-top: 20px;
         border: 1px solid #ccc;
         padding: 10px;
         min-height: 50px;
+        background-color: #f9f9f9;
       }
       .result-item {
         border-bottom: 1px dotted #eee;
@@ -33,24 +62,196 @@
         margin-left: 10px;
         color: #555;
       }
+      #auth-container,
+      #analysis-container {
+        margin-bottom: 30px;
+        padding: 15px;
+        border: 1px solid #eee;
+        border-radius: 5px;
+      }
+      #user-info {
+        margin-bottom: 15px;
+      }
+      .auth-section {
+        margin-bottom: 15px;
+      }
+      .auth-section h3 {
+        margin-top: 0;
+        margin-bottom: 10px;
+      }
+      #error-message {
+        color: red;
+        margin-top: 10px;
+        font-size: 0.9em;
+      }
+      /* Initially hide analysis container */
+      #analysis-container {
+        display: none;
+      }
     </style>
   </head>
   <body>
     <h1>Smartglot - Frequent Term Analysis</h1>
 
-    <h2>Enter Text to Analyze</h2>
-    <textarea id="textInput" placeholder="Paste your text here..."></textarea>
-    <button id="analyzeButton">Analyze Terms</button>
+    <!-- Authentication Section -->
+    <div id="auth-container">
+      <h2>Authentication</h2>
+      <div id="user-info">Loading user status...</div>
+      <div id="error-message"></div>
 
-    <h2>Top Terms</h2>
-    <div id="results">Enter text above and click analyze.</div>
+      <!-- Login Form (shown when logged out) -->
+      <div id="login-section" class="auth-section" style="display: none">
+        <h3>Login</h3>
+        <input type="email" id="loginEmail" placeholder="Email" />
+        <input type="password" id="loginPassword" placeholder="Password" />
+        <button id="loginButton">Login</button>
+      </div>
+
+      <!-- Sign Up Form (shown when logged out) -->
+      <div id="signup-section" class="auth-section" style="display: none">
+        <h3>Sign Up</h3>
+        <input type="email" id="signupEmail" placeholder="Email" />
+        <input type="password" id="signupPassword" placeholder="Password" />
+        <input
+          type="password"
+          id="signupPasswordConfirm"
+          placeholder="Confirm Password"
+        />
+        <button id="signupButton">Sign Up</button>
+      </div>
+
+      <!-- Logout Button (shown when logged in) -->
+      <button id="logoutButton" style="display: none">Logout</button>
+    </div>
+
+    <!-- Analysis Section (shown when logged in) -->
+    <div id="analysis-container">
+      <h2>Enter Text to Analyze</h2>
+      <textarea id="textInput" placeholder="Paste your text here..."></textarea>
+      <button id="analyzeButton">Analyze Terms</button>
+
+      <h2>Top Terms</h2>
+      <div id="results">Enter text above and click analyze.</div>
+    </div>
+
+    <!-- Firebase Initialization Script -->
+    <script>
+      const firebaseConfig = {
+        /* ... */
+      };
+      firebase.initializeApp(firebaseConfig);
+      const auth = firebase.auth(); // 'auth' is defined here
+    </script>
+
+    <!-- Your Custom Script -->
+    <script src="index.js" defer></script>
+    <!-- Load index.js AFTER auth is defined -->
 
     <script>
+      // DOM Elements
       const textInput = document.getElementById('textInput');
       const analyzeButton = document.getElementById('analyzeButton');
       const resultsDiv = document.getElementById('results');
+      const userInfoDiv = document.getElementById('user-info');
+      const loginSection = document.getElementById('login-section');
+      const signupSection = document.getElementById('signup-section');
+      const loginEmailInput = document.getElementById('loginEmail');
+      const loginPasswordInput = document.getElementById('loginPassword');
+      const signupEmailInput = document.getElementById('signupEmail');
+      const signupPasswordInput = document.getElementById('signupPassword');
+      const loginButton = document.getElementById('loginButton');
+      const signupButton = document.getElementById('signupButton');
+      const logoutButton = document.getElementById('logoutButton');
+      const analysisContainer = document.getElementById('analysis-container');
+      const errorMessageDiv = document.getElementById('error-message');
 
+      // Function to display error messages
+      function showAuthError(message) {
+        errorMessageDiv.textContent = message;
+      }
+
+      // Function to clear error messages
+      function clearAuthError() {
+        errorMessageDiv.textContent = '';
+      }
+
+      // --- Authentication Logic ---
+
+      // Sign Up
+      signupButton.addEventListener('click', async () => {
+        clearAuthError();
+        const email = signupEmailInput.value;
+        const password = signupPasswordInput.value;
+        try {
+          await auth.createUserWithEmailAndPassword(email, password);
+          console.log('User signed up successfully!');
+          // UI will update via onAuthStateChanged
+        } catch (error) {
+          console.error('Sign up failed:', error);
+          showAuthError(`Sign up failed: ${error.message}`);
+        }
+      });
+
+      // Login
+      loginButton.addEventListener('click', async () => {
+        clearAuthError();
+        const email = loginEmailInput.value;
+        const password = loginPasswordInput.value;
+        try {
+          await auth.signInWithEmailAndPassword(email, password);
+          console.log('User logged in successfully!');
+          // UI will update via onAuthStateChanged
+        } catch (error) {
+          console.error('Login failed:', error);
+          showAuthError(`Login failed: ${error.message}`);
+        }
+      });
+
+      // Logout
+      logoutButton.addEventListener('click', async () => {
+        clearAuthError();
+        try {
+          await auth.signOut();
+          console.log('User logged out successfully!');
+          // UI will update via onAuthStateChanged
+        } catch (error) {
+          console.error('Logout failed:', error);
+          showAuthError(`Logout failed: ${error.message}`);
+        }
+      });
+
+      // Listen for Auth State Changes
+      auth.onAuthStateChanged((user) => {
+        clearAuthError(); // Clear errors on auth state change
+        if (user) {
+          // User is signed in
+          userInfoDiv.textContent = `Logged in as: ${user.email}`;
+          loginSection.style.display = 'none';
+          signupSection.style.display = 'none';
+          logoutButton.style.display = 'block';
+          analysisContainer.style.display = 'block'; // Show analysis section
+          // Optionally clear analysis results or text area on login
+          // resultsDiv.innerHTML = 'Enter text above and click analyze.';
+          // textInput.value = '';
+        } else {
+          // User is signed out
+          userInfoDiv.textContent = 'You are not logged in.';
+          loginSection.style.display = 'block';
+          signupSection.style.display = 'block';
+          logoutButton.style.display = 'none';
+          analysisContainer.style.display = 'none'; // Hide analysis section
+          resultsDiv.innerHTML = 'Please log in to analyze text.'; // Update analysis status
+        }
+      });
+
+      // --- Analysis Logic (existing) ---
       analyzeButton.addEventListener('click', async () => {
+        // Ensure user is logged in before analyzing (optional, could rely on UI hiding)
+        if (!auth.currentUser) {
+          resultsDiv.innerHTML = 'Please log in first.';
+          return;
+        }
+
         const textToAnalyze = textInput.value.trim();
         if (!textToAnalyze) {
           resultsDiv.innerHTML = 'Please enter some text to analyze.';
@@ -65,6 +266,8 @@
             method: 'POST',
             headers: {
               'Content-Type': 'application/json',
+              // TODO: Consider adding Authorization header if backend needs user ID
+              // 'Authorization': `Bearer ${await auth.currentUser.getIdToken()}`
             },
             body: JSON.stringify({ text: textToAnalyze }),
           });

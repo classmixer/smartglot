@@ -1,0 +1,12 @@
+#error-message {
+  color: red;
+  margin-top: 10px;
+  font-size: 0.9em;
+}
+.input-error {
+  border: 1px solid red;
+}
+/* Initially hide analysis container */
+#analysis-container {
+  display: none;
+}
