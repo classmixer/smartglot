@@ -2,17 +2,16 @@
 <html>
   <head>
     <title>Smartglot - Term Analysis</title>
-    <!-- TODO: Add Firebase SDK scripts here -->
-    <!-- Get these from your Firebase project settings -->
+    <!-- Firebase SDK scripts -->
     <script src="https://www.gstatic.com/firebasejs/9.6.7/firebase-app-compat.js"></script>
     <script src="https://www.gstatic.com/firebasejs/9.6.7/firebase-auth-compat.js"></script>
     <script>
       // Firebase 구성
       var firebaseConfig = {
-        apiKey: 'AIzaSyA0iVwY44v9lokoS2Zm_jl9pYc8pV6Nje8',
-        authDomain: 'smartglot.firebaseapp.com', 
+        apiKey: 'AIzaSyA0iVwY44v9lokoS2Zm_jl9pYc8pV6Nje8', // 실제 키로 교체하세요
+        authDomain: 'smartglot.firebaseapp.com',
         projectId: 'smartglot',
-        storageBucket: 'smartglot.firebasestorage.app',
+        storageBucket: 'smartglot.firebasestorage.app', // 버킷 이름 확인
         messagingSenderId: '516870202505',
         appId: '1:516870202505:web:6d7753b2ae644def4e5258',
       };
@@ -26,7 +25,48 @@
       /* Basic styling */
       body {
         font-family: sans-serif;
+        padding: 0; /* Remove body padding */
+        margin: 0; /* Remove body margin */
+        display: flex;
+        flex-direction: column;
+        min-height: 100vh;
+      }
+      .container {
         padding: 20px;
+        flex-grow: 1;
+      }
+      header {
+        background-color: #f1f1f1;
+        padding: 10px 20px;
+        display: flex;
+        justify-content: space-between;
+        align-items: center;
+        border-bottom: 1px solid #ccc;
+      }
+      header h1 {
+        margin: 0;
+        font-size: 1.5em;
+      }
+      header nav button {
+        margin-left: 10px;
+        padding: 8px 12px;
+      }
+      #welcome-container {
+        text-align: center;
+        padding: 40px 20px;
+      }
+      #welcome-container h2 {
+        margin-bottom: 20px;
+      }
+      #welcome-container p {
+        max-width: 600px;
+        margin: 0 auto 20px auto;
+        line-height: 1.6;
+      }
+      #welcome-container button {
+        margin-top: 10px;
+        padding: 12px 20px;
+        font-size: 1.1em;
       }
       textarea {
         width: 80%;
@@ -43,6 +83,9 @@
         padding: 8px;
         margin-right: 5px;
         margin-bottom: 10px; /* Add space below inputs */
+        display: block; /* Make inputs block level */
+        width: calc(100% - 18px); /* Adjust width */
+        max-width: 300px; /* Max width for inputs */
       }
       #results {
         margin-top: 20px;
@@ -64,191 +107,386 @@
       }
       #auth-container,
       #analysis-container {
-        margin-bottom: 30px;
-        padding: 15px;
+        margin: 30px auto; /* Center containers */
+        padding: 20px;
         border: 1px solid #eee;
         border-radius: 5px;
+        max-width: 500px; /* Limit width */
+        display: none; /* Initially hidden */
       }
-      #user-info {
-        margin-bottom: 15px;
+      #auth-container h2,
+      #analysis-container h2 {
+        text-align: center;
+        margin-bottom: 20px;
+      }
+      #user-status {
+        /* Renamed from user-info */
+        text-align: right;
+        font-size: 0.9em;
+        color: #555;
       }
       .auth-section {
         margin-bottom: 15px;
+        padding-top: 10px;
+        border-top: 1px solid #eee;
+      }
+      .auth-section:first-of-type {
+        border-top: none;
+        padding-top: 0;
       }
       .auth-section h3 {
         margin-top: 0;
-        margin-bottom: 10px;
+        margin-bottom: 15px;
       }
       #error-message {
         color: red;
         margin-top: 10px;
+        margin-bottom: 15px; /* Add margin below error */
         font-size: 0.9em;
+        min-height: 1.2em; /* Reserve space for error */
+        text-align: center;
       }
-      /* Initially hide analysis container */
-      #analysis-container {
+      .input-error {
+        border: 1px solid red;
+      }
+
+      /* Initial display states */
+      #auth-container,
+      #analysis-container,
+      #headerLogoutButton {
         display: none;
+      }
+      #welcome-container,
+      #headerLoginButton,
+      #headerSignupButton {
+        display: block; /* Adjust display for header buttons later */
+      }
+      header nav {
+        /* Container for header buttons */
+        display: flex;
+        align-items: center;
       }
     </style>
   </head>
   <body>
-    <h1>Smartglot - Frequent Term Analysis</h1>
+    <header>
+      <h1>Smartglot</h1>
+      <nav>
+        <span id="user-status"></span>
+        <button id="headerLoginButton">Login</button>
+        <button id="headerSignupButton">Sign Up</button>
+        <button id="headerLogoutButton">Logout</button>
+      </nav>
+    </header>
 
-    <!-- Authentication Section -->
-    <div id="auth-container">
-      <h2>Authentication</h2>
-      <div id="user-info">Loading user status...</div>
-      <div id="error-message"></div>
-
-      <!-- Login Form (shown when logged out) -->
-      <div id="login-section" class="auth-section" style="display: none">
-        <h3>Login</h3>
-        <input type="email" id="loginEmail" placeholder="Email" />
-        <input type="password" id="loginPassword" placeholder="Password" />
-        <button id="loginButton">Login</button>
+    <div class="container">
+      <!-- Welcome Section -->
+      <div id="welcome-container">
+        <h2>Welcome to Smartglot!</h2>
+        <p>
+          Analyze text to discover the most frequent and significant terms.
+          Smartglot helps you understand key concepts in your documents quickly
+          and efficiently.
+        </p>
+        <p>Log in or sign up to start analyzing your text.</p>
+        <button id="getStartedButton">Get Started</button>
       </div>
 
-      <!-- Sign Up Form (shown when logged out) -->
-      <div id="signup-section" class="auth-section" style="display: none">
-        <h3>Sign Up</h3>
-        <input type="email" id="signupEmail" placeholder="Email" />
-        <input type="password" id="signupPassword" placeholder="Password" />
-        <input
-          type="password"
-          id="signupPasswordConfirm"
-          placeholder="Confirm Password"
-        />
-        <button id="signupButton">Sign Up</button>
+      <!-- Authentication Section -->
+      <div id="auth-container">
+        <h2>Authentication</h2>
+        <div id="error-message"></div>
+
+        <!-- Login Form -->
+        <div id="login-section" class="auth-section">
+          <h3>Login</h3>
+          <input type="email" id="loginEmail" placeholder="Email" />
+          <input type="password" id="loginPassword" placeholder="Password" />
+          <button id="loginButton">Login</button>
+          <p>
+            Don't have an account? <a href="#" id="showSignupLink">Sign Up</a>
+          </p>
+        </div>
+
+        <!-- Sign Up Form -->
+        <div id="signup-section" class="auth-section" style="display: none">
+          <h3>Sign Up</h3>
+          <input type="email" id="signupEmail" placeholder="Email" />
+          <input type="password" id="signupPassword" placeholder="Password" />
+          <input
+            type="password"
+            id="signupPasswordConfirm"
+            placeholder="Confirm Password"
+          />
+          <button id="signupButton">Sign Up</button>
+          <p>
+            Already have an account? <a href="#" id="showLoginLink">Login</a>
+          </p>
+        </div>
+        <!-- Removed the separate logout button from here -->
       </div>
 
-      <!-- Logout Button (shown when logged in) -->
-      <button id="logoutButton" style="display: none">Logout</button>
+      <!-- Analysis Section -->
+      <div id="analysis-container">
+        <h2>Enter Text to Analyze</h2>
+        <textarea
+          id="textInput"
+          placeholder="Paste your text here..."
+        ></textarea>
+        <button id="analyzeButton">Analyze Terms</button>
+
+        <h2>Top Terms</h2>
+        <div id="results">Enter text above and click analyze.</div>
+      </div>
     </div>
+    <!-- /container -->
 
-    <!-- Analysis Section (shown when logged in) -->
-    <div id="analysis-container">
-      <h2>Enter Text to Analyze</h2>
-      <textarea id="textInput" placeholder="Paste your text here..."></textarea>
-      <button id="analyzeButton">Analyze Terms</button>
-
-      <h2>Top Terms</h2>
-      <div id="results">Enter text above and click analyze.</div>
-    </div>
-
-    <!-- Firebase Initialization Script -->
+    <!-- Firebase Initialization Script (already done above) -->
     <script>
-      const firebaseConfig = {
-        /* ... */
-      };
-      firebase.initializeApp(firebaseConfig);
-      const auth = firebase.auth(); // 'auth' is defined here
+      // const firebaseConfig = { /* ... */ }; // Already defined
+      // firebase.initializeApp(firebaseConfig); // Already initialized
+      // const auth = firebase.auth(); // Already defined
     </script>
 
-    <!-- Your Custom Script -->
-    <script src="index.js" defer></script>
-    <!-- Load index.js AFTER auth is defined -->
+    <!-- Load index.js AFTER auth is defined and DOM is ready -->
+    <!-- We will move the JS logic here for simplicity -->
+    <!-- <script src="index.js" defer></script> -->
 
     <script>
       // DOM Elements
-      const textInput = document.getElementById('textInput');
-      const analyzeButton = document.getElementById('analyzeButton');
-      const resultsDiv = document.getElementById('results');
-      const userInfoDiv = document.getElementById('user-info');
+      const welcomeContainer = document.getElementById('welcome-container');
+      const authContainer = document.getElementById('auth-container');
+      const analysisContainer = document.getElementById('analysis-container');
+
+      const headerLoginButton = document.getElementById('headerLoginButton');
+      const headerSignupButton = document.getElementById('headerSignupButton');
+      const headerLogoutButton = document.getElementById('headerLogoutButton');
+      const userStatusDiv = document.getElementById('user-status'); // Was user-info
+
+      const getStartedButton = document.getElementById('getStartedButton'); // New button
+      const showSignupLink = document.getElementById('showSignupLink');
+      const showLoginLink = document.getElementById('showLoginLink');
+
       const loginSection = document.getElementById('login-section');
       const signupSection = document.getElementById('signup-section');
       const loginEmailInput = document.getElementById('loginEmail');
       const loginPasswordInput = document.getElementById('loginPassword');
+      const loginButton = document.getElementById('loginButton'); // Inside auth container
+
       const signupEmailInput = document.getElementById('signupEmail');
       const signupPasswordInput = document.getElementById('signupPassword');
-      const loginButton = document.getElementById('loginButton');
-      const signupButton = document.getElementById('signupButton');
-      const logoutButton = document.getElementById('logoutButton');
-      const analysisContainer = document.getElementById('analysis-container');
+      const signupPasswordConfirmInput = document.getElementById(
+        'signupPasswordConfirm',
+      );
+      const signupButton = document.getElementById('signupButton'); // Inside auth container
+
       const errorMessageDiv = document.getElementById('error-message');
+
+      const textInput = document.getElementById('textInput');
+      const analyzeButton = document.getElementById('analyzeButton');
+      const resultsDiv = document.getElementById('results');
+
+      // --- UI Control Functions ---
+      function showWelcomeScreen() {
+        welcomeContainer.style.display = 'block';
+        authContainer.style.display = 'none';
+        analysisContainer.style.display = 'none';
+        headerLoginButton.style.display = 'inline-block'; // Use inline-block for buttons
+        headerSignupButton.style.display = 'inline-block';
+        headerLogoutButton.style.display = 'none';
+        userStatusDiv.textContent = ''; // Clear user status
+        clearAuthError();
+        clearAuthForms();
+      }
+
+      function showAuthScreen(showLogin = true) {
+        welcomeContainer.style.display = 'none';
+        authContainer.style.display = 'block';
+        analysisContainer.style.display = 'none';
+        headerLoginButton.style.display = 'none'; // Hide header buttons when auth form is shown
+        headerSignupButton.style.display = 'none';
+        headerLogoutButton.style.display = 'none';
+        userStatusDiv.textContent = ''; // Clear user status
+        if (showLogin) {
+          loginSection.style.display = 'block';
+          signupSection.style.display = 'none';
+        } else {
+          loginSection.style.display = 'none';
+          signupSection.style.display = 'block';
+        }
+        clearAuthError();
+      }
+
+      function showAnalysisScreen(user) {
+        welcomeContainer.style.display = 'none';
+        authContainer.style.display = 'none';
+        analysisContainer.style.display = 'block';
+        headerLoginButton.style.display = 'none';
+        headerSignupButton.style.display = 'none';
+        headerLogoutButton.style.display = 'inline-block';
+        userStatusDiv.textContent = `Logged in as: ${user.email}`;
+        clearAuthError();
+        clearAuthForms(); // Clear forms after successful login/signup
+        // Optionally clear analysis results/input on showing the screen
+        resultsDiv.innerHTML = 'Enter text above and click analyze.';
+        textInput.value = '';
+      }
+
+      // --- Event Listeners for UI Navigation ---
+      headerLoginButton.addEventListener('click', () => showAuthScreen(true));
+      headerSignupButton.addEventListener('click', () => showAuthScreen(false));
+      getStartedButton.addEventListener('click', () => showAuthScreen(true)); // Get Started shows login
+      showSignupLink.addEventListener('click', (e) => {
+        e.preventDefault();
+        showAuthScreen(false);
+      });
+      showLoginLink.addEventListener('click', (e) => {
+        e.preventDefault();
+        showAuthScreen(true);
+      });
+
+      // --- Authentication Logic ---
 
       // Function to display error messages
       function showAuthError(message) {
         errorMessageDiv.textContent = message;
+        // Clear previous errors visually
+        loginEmailInput.classList.remove('input-error');
+        loginPasswordInput.classList.remove('input-error');
+        signupEmailInput.classList.remove('input-error');
+        signupPasswordInput.classList.remove('input-error');
+        signupPasswordConfirmInput.classList.remove('input-error');
       }
 
-      // Function to clear error messages
+      // Function to clear error messages and input styles
       function clearAuthError() {
         errorMessageDiv.textContent = '';
+        loginEmailInput.classList.remove('input-error');
+        loginPasswordInput.classList.remove('input-error');
+        signupEmailInput.classList.remove('input-error');
+        signupPasswordInput.classList.remove('input-error');
+        signupPasswordConfirmInput.classList.remove('input-error');
       }
 
-      // --- Authentication Logic ---
+      // Function to clear login/signup form inputs
+      function clearAuthForms() {
+        loginEmailInput.value = '';
+        loginPasswordInput.value = '';
+        signupEmailInput.value = '';
+        signupPasswordInput.value = '';
+        signupPasswordConfirmInput.value = '';
+      }
 
-      // Sign Up
+      // Sign Up Button (inside auth container)
       signupButton.addEventListener('click', async () => {
         clearAuthError();
         const email = signupEmailInput.value;
         const password = signupPasswordInput.value;
+        const passwordConfirm = signupPasswordConfirmInput.value;
+
+        if (password !== passwordConfirm) {
+          showAuthError('Passwords do not match.');
+          signupPasswordInput.classList.add('input-error');
+          signupPasswordConfirmInput.classList.add('input-error');
+          return;
+        }
+
+        if (!email || !password) {
+          showAuthError('Email and password cannot be empty.');
+          if (!email) signupEmailInput.classList.add('input-error');
+          if (!password) {
+            signupPasswordInput.classList.add('input-error');
+            signupPasswordConfirmInput.classList.add('input-error');
+          }
+          return;
+        }
+
         try {
           await auth.createUserWithEmailAndPassword(email, password);
           console.log('User signed up successfully!');
-          // UI will update via onAuthStateChanged
+          // UI will update via onAuthStateChanged, which calls showAnalysisScreen
         } catch (error) {
           console.error('Sign up failed:', error);
+          if (
+            error.code === 'auth/invalid-email' ||
+            error.code === 'auth/email-already-in-use'
+          ) {
+            signupEmailInput.classList.add('input-error');
+          } else if (error.code === 'auth/weak-password') {
+            signupPasswordInput.classList.add('input-error');
+            signupPasswordConfirmInput.classList.add('input-error');
+          }
           showAuthError(`Sign up failed: ${error.message}`);
         }
       });
 
-      // Login
+      // Login Button (inside auth container)
       loginButton.addEventListener('click', async () => {
         clearAuthError();
         const email = loginEmailInput.value;
         const password = loginPasswordInput.value;
+
+        if (!email || !password) {
+          showAuthError('Email and password cannot be empty.');
+          if (!email) loginEmailInput.classList.add('input-error');
+          if (!password) loginPasswordInput.classList.add('input-error');
+          return;
+        }
+
         try {
           await auth.signInWithEmailAndPassword(email, password);
           console.log('User logged in successfully!');
-          // UI will update via onAuthStateChanged
+          // UI will update via onAuthStateChanged, which calls showAnalysisScreen
         } catch (error) {
           console.error('Login failed:', error);
+          if (
+            error.code === 'auth/invalid-email' ||
+            error.code === 'auth/user-not-found' ||
+            error.code === 'auth/invalid-credential'
+          ) {
+            loginEmailInput.classList.add('input-error');
+          }
+          if (
+            error.code === 'auth/wrong-password' ||
+            error.code === 'auth/invalid-credential'
+          ) {
+            loginPasswordInput.classList.add('input-error');
+          }
           showAuthError(`Login failed: ${error.message}`);
         }
       });
 
-      // Logout
-      logoutButton.addEventListener('click', async () => {
-        clearAuthError();
+      // Logout (Header Button)
+      headerLogoutButton.addEventListener('click', async () => {
+        clearAuthError(); // Clear any lingering errors
         try {
           await auth.signOut();
           console.log('User logged out successfully!');
-          // UI will update via onAuthStateChanged
+          // UI will update via onAuthStateChanged, which calls showWelcomeScreen
         } catch (error) {
           console.error('Logout failed:', error);
-          showAuthError(`Logout failed: ${error.message}`);
+          // Show error somewhere? Maybe an alert for logout errors?
+          alert(`Logout failed: ${error.message}`);
         }
       });
 
       // Listen for Auth State Changes
       auth.onAuthStateChanged((user) => {
-        clearAuthError(); // Clear errors on auth state change
         if (user) {
           // User is signed in
-          userInfoDiv.textContent = `Logged in as: ${user.email}`;
-          loginSection.style.display = 'none';
-          signupSection.style.display = 'none';
-          logoutButton.style.display = 'block';
-          analysisContainer.style.display = 'block'; // Show analysis section
-          // Optionally clear analysis results or text area on login
-          // resultsDiv.innerHTML = 'Enter text above and click analyze.';
-          // textInput.value = '';
+          showAnalysisScreen(user);
         } else {
           // User is signed out
-          userInfoDiv.textContent = 'You are not logged in.';
-          loginSection.style.display = 'block';
-          signupSection.style.display = 'block';
-          logoutButton.style.display = 'none';
-          analysisContainer.style.display = 'none'; // Hide analysis section
-          resultsDiv.innerHTML = 'Please log in to analyze text.'; // Update analysis status
+          showWelcomeScreen();
         }
       });
 
-      // --- Analysis Logic (existing) ---
+      // --- Analysis Logic (existing, slightly modified) ---
       analyzeButton.addEventListener('click', async () => {
-        // Ensure user is logged in before analyzing (optional, could rely on UI hiding)
-        if (!auth.currentUser) {
-          resultsDiv.innerHTML = 'Please log in first.';
+        const user = auth.currentUser; // Get current user
+        if (!user) {
+          resultsDiv.innerHTML = 'Please log in first.'; // Should not happen if UI is correct, but good failsafe
+          showAuthScreen(true); // Redirect to login
           return;
         }
 
@@ -261,25 +499,37 @@
         resultsDiv.innerHTML = 'Analyzing...';
 
         try {
+          const token = await user.getIdToken(); // Get Firebase ID token
+
           // Make a POST request to the backend API
           const response = await fetch('/api/analyze-terms', {
             method: 'POST',
             headers: {
               'Content-Type': 'application/json',
-              // TODO: Consider adding Authorization header if backend needs user ID
-              // 'Authorization': `Bearer ${await auth.currentUser.getIdToken()}`
+              // Add the Authorization header with the Firebase ID token
+              Authorization: `Bearer ${token}`,
             },
             body: JSON.stringify({ text: textToAnalyze }),
           });
 
           if (!response.ok) {
-            const errorData = await response.json();
-            throw new Error(
-              errorData.message || `Server error: ${response.status}`,
-            );
+            // Try to parse error message from backend
+            let errorMsg = `Server error: ${response.status}`;
+            try {
+              const errorData = await response.json();
+              errorMsg = errorData.message || errorMsg;
+            } catch (parseError) {
+              // Ignore if response is not JSON
+              errorMsg = (await response.text()) || errorMsg; // Use text response if available
+            }
+            throw new Error(errorMsg);
           }
 
           const terms = await response.json();
+
+          if (!Array.isArray(terms)) {
+            throw new Error('Invalid response format from server.');
+          }
 
           if (terms.length === 0) {
             resultsDiv.innerHTML =
@@ -288,13 +538,28 @@
             // Format and display ranked terms
             resultsDiv.innerHTML = ''; // Clear previous results
             terms.forEach((termData) => {
-              const itemDiv = document.createElement('div');
-              itemDiv.classList.add('result-item');
-              itemDiv.innerHTML = `
-                <span class="term">${escapeHtml(termData.term)}</span>
-                <span class="freq">(Frequency: ${termData.frequency})</span>
-              `;
-              resultsDiv.appendChild(itemDiv);
+              if (
+                termData &&
+                typeof termData.term !== 'undefined' &&
+                typeof termData.frequency !== 'undefined'
+              ) {
+                const itemDiv = document.createElement('div');
+                itemDiv.classList.add('result-item');
+                // Use textContent for security instead of innerHTML where possible
+                const termSpan = document.createElement('span');
+                termSpan.className = 'term';
+                termSpan.textContent = termData.term; // Safely sets text
+
+                const freqSpan = document.createElement('span');
+                freqSpan.className = 'freq';
+                freqSpan.textContent = ` (Frequency: ${termData.frequency})`;
+
+                itemDiv.appendChild(termSpan);
+                itemDiv.appendChild(freqSpan);
+                resultsDiv.appendChild(itemDiv);
+              } else {
+                console.warn('Received invalid term data:', termData);
+              }
             });
           }
         } catch (error) {
@@ -303,15 +568,24 @@
         }
       });
 
-      // Basic HTML escaping function
+      // Basic HTML escaping function (kept for reference, but prefer textContent)
       function escapeHtml(unsafe) {
-        if (!unsafe) return '';
+        if (typeof unsafe !== 'string') return ''; // Ensure input is a string
         return unsafe
           .replace(/&/g, '&amp;')
           .replace(/</g, '&lt;')
           .replace(/>/g, '&gt;')
           .replace(/"/g, '&quot;')
           .replace(/'/g, '&#039;');
+      }
+
+      // Initialize the view based on initial auth state when the script runs
+      // (onAuthStateChanged will handle subsequent changes)
+      const initialUser = auth.currentUser;
+      if (initialUser) {
+        showAnalysisScreen(initialUser);
+      } else {
+        showWelcomeScreen();
       }
     </script>
   </body>
