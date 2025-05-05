@@ -1,9 +1,115 @@
-<!DOCTYPE html>
+<!doctype html>
 <html>
-<head>
-    <title>Smartglot</title>
-</head>
-<body>
-    <h1>Welcome to Smartglot</h1>
-</body>
-</html> 
+  <head>
+    <title>Smartglot - Term Analysis</title>
+    <style>
+      /* Basic styling */
+      body {
+        font-family: sans-serif;
+      }
+      textarea {
+        width: 80%;
+        min-height: 150px;
+        margin-bottom: 10px;
+        display: block;
+      }
+      button {
+        padding: 10px 15px;
+      }
+      #results {
+        margin-top: 20px;
+        border: 1px solid #ccc;
+        padding: 10px;
+        min-height: 50px;
+      }
+      .result-item {
+        border-bottom: 1px dotted #eee;
+        padding: 5px 0;
+      }
+      .result-item .term {
+        font-weight: bold;
+      }
+      .result-item .freq {
+        margin-left: 10px;
+        color: #555;
+      }
+    </style>
+  </head>
+  <body>
+    <h1>Smartglot - Frequent Term Analysis</h1>
+
+    <h2>Enter Text to Analyze</h2>
+    <textarea id="textInput" placeholder="Paste your text here..."></textarea>
+    <button id="analyzeButton">Analyze Terms</button>
+
+    <h2>Top Terms</h2>
+    <div id="results">Enter text above and click analyze.</div>
+
+    <script>
+      const textInput = document.getElementById('textInput');
+      const analyzeButton = document.getElementById('analyzeButton');
+      const resultsDiv = document.getElementById('results');
+
+      analyzeButton.addEventListener('click', async () => {
+        const textToAnalyze = textInput.value.trim();
+        if (!textToAnalyze) {
+          resultsDiv.innerHTML = 'Please enter some text to analyze.';
+          return;
+        }
+
+        resultsDiv.innerHTML = 'Analyzing...';
+
+        try {
+          // Make a POST request to the backend API
+          const response = await fetch('/api/analyze-terms', {
+            method: 'POST',
+            headers: {
+              'Content-Type': 'application/json',
+            },
+            body: JSON.stringify({ text: textToAnalyze }),
+          });
+
+          if (!response.ok) {
+            const errorData = await response.json();
+            throw new Error(
+              errorData.message || `Server error: ${response.status}`,
+            );
+          }
+
+          const terms = await response.json();
+
+          if (terms.length === 0) {
+            resultsDiv.innerHTML =
+              'No significant terms found (or only stop words/numbers).';
+          } else {
+            // Format and display ranked terms
+            resultsDiv.innerHTML = ''; // Clear previous results
+            terms.forEach((termData) => {
+              const itemDiv = document.createElement('div');
+              itemDiv.classList.add('result-item');
+              itemDiv.innerHTML = `
+                <span class="term">${escapeHtml(termData.term)}</span>
+                <span class="freq">(Frequency: ${termData.frequency})</span>
+              `;
+              resultsDiv.appendChild(itemDiv);
+            });
+          }
+        } catch (error) {
+          console.error('Analysis failed:', error);
+          resultsDiv.innerHTML = `Error performing analysis: ${error.message}`;
+        }
+      });
+
+      // Basic HTML escaping function
+      function escapeHtml(unsafe) {
+        if (!unsafe) return '';
+        return unsafe
+          .replace(/&/g, '&amp;')
+          .replace(/</g, '&lt;')
+          .replace(/>/g, '&gt;')
+          .replace(/"/g, '&quot;')
+          .replace(/'/g, '&#039;');
+      }
+    </script>
+  </body>
+</html>
