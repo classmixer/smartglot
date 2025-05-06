@@ -3,5 +3,8 @@
     "backend": "smartglot",
     "region": "us-central1",
     "public": "."
+  },
+  "functions": {
+    "source": "functions"
   }
-} 
+}
