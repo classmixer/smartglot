@@ -1,3 +1,4 @@
+/* eslint-env node */
 const functions = require('firebase-functions');
 const admin = require('firebase-admin');
 const vision = require('@google-cloud/vision');
@@ -128,6 +129,23 @@ exports.analyzePdf = functions.https.onCall(async (data, context) => {
       console.log(
         `[${uid}] Extracted ${extractedText.length} characters from PDF.`,
       );
+
+      // Filter out single-character words for Korean text
+      if (extractedText && extractedText.length > 0) {
+        const words = extractedText.split(/\s+/); // Split by whitespace
+        const filteredWords = words.filter((word) => {
+          // 이 안의 로직을 검토하거나 잠시 비활성화
+          // 예시:
+          // if (word.length < 3) { // 사용자가 직접 수정한 부분일 수 있음
+          //   return false;
+          // }
+          return true; // 임시로 모든 단어 통과
+        });
+        extractedText = filteredWords.join(' ');
+        console.log(
+          `[${uid}] Text after CUSTM filtering: ${extractedText.length} characters.`,
+        );
+      }
     } else {
       console.warn(
         `[${uid}] No fullTextAnnotation found in Vision AI response for ${gcsSourceUri}`,
@@ -187,7 +205,7 @@ exports.analyzePdf = functions.https.onCall(async (data, context) => {
     );
     const response = await axios.post(
       analysisEndpoint,
-      { text: extractedText },
+      { korean_content: extractedText },
       {
         // Restore the config object with headers
         headers: {
@@ -201,7 +219,27 @@ exports.analyzePdf = functions.https.onCall(async (data, context) => {
 
     console.log(`[${uid}] Received analysis results from backend.`);
     // 7. Return Results
-    return response.data; // Assuming the backend returns the array of terms (original simple return)
+    // return response.data; // Assuming the backend returns the array of terms (original simple return)
+
+    // Filter terms by frequency (>= 2)
+    const terms = response.data;
+    if (Array.isArray(terms)) {
+      const filteredTerms = terms.filter(
+        (termData) =>
+          termData &&
+          typeof termData.frequency === 'number' &&
+          termData.frequency >= 2,
+      );
+      console.log(
+        `[${uid}] Returning ${filteredTerms.length} terms after frequency filtering (>=2). Original count: ${terms.length}`,
+      );
+      return filteredTerms;
+    } else {
+      console.warn(
+        `[${uid}] Received non-array data from analysis endpoint, returning as is.`,
+      );
+      return terms; // Or handle error appropriately
+    }
   } catch (error) {
     console.error(
       `[${uid}] Error calling analysis endpoint (${analysisEndpoint}):`,
