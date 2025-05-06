@@ -482,7 +482,6 @@
       const errorMessageDiv = document.getElementById('error-message');
 
       const textInput = document.getElementById('textInput');
-      const analyzeButton = document.getElementById('analyzeButton');
       const resultsDiv = document.getElementById('results');
 
       // New/Updated Elements for Text/PDF analysis differentiation
@@ -782,7 +781,7 @@
       });
 
       // --- Analysis Logic (existing, slightly modified) ---
-      analyzeButton.addEventListener('click', async () => {
+      analyzeTextButton.addEventListener('click', async () => {
         const user = auth.currentUser; // Get current user
         if (!user) {
           resultsDiv.innerHTML = 'Please log in first.'; // Should not happen if UI is correct, but good failsafe
