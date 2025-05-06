@@ -11,7 +11,7 @@ env:
   - variable: ES_URL
     value: 'https://my-elasticsearch-project-dd1d8e.es.us-central1.gcp.elastic.cloud:443' # 실제 Elasticsearch URL로 교체해주세요
   - variable: ES_API_KEY
-    value: 'c1lUWWxKWUJzRkljUnBrQWMzUGc6emNUMTY4SllheDJicTNwNnptTk1uQQ==Y' # 실제 Elasticsearch API 키로 교체해주세요
+    value: 'c1lUWWxKWUJzRkljUnBrQWMzUGc6emNUMTY4SllheDJicTNwNnptTk1uQQ==' # 실제 Elasticsearch API 키로 교체해주세요
   # server.js에서 process.env.PORT를 사용하므로, App Hosting이 자동으로 주입해줍니다.
   # 필요하다면 다른 환경 변수도 여기에 추가할 수 있습니다.
 # App Hosting이 빌드 명령어를 실행하도록 설정할 수 있습니다.
