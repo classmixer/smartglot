@@ -247,11 +247,7 @@
       <!-- Welcome Section -->
       <div id="welcome-container">
         <h2>Welcome to Smartglot!</h2>
-        <p>
-          Analyze text to discover the most frequent and significant terms.
-          Smartglot helps you understand key concepts in your documents quickly
-          and efficiently.
-        </p>
+        <p>Just put in a document and get your own glossary.</p>
         <p>Log in or sign up to start analyzing your text.</p>
         <button id="getStartedButton">Get Started</button>
       </div>
@@ -319,7 +315,7 @@
 
       <!-- Analysis Section -->
       <div id="analysis-container">
-        <h2> Upload PDF to Analyze</h2>
+        <h2>Upload PDF to Analyze</h2>
         <hr style="margin: 20px 0" />
 
         <!-- PDF Input -->
@@ -439,7 +435,6 @@
 
     <!-- Load index.js AFTER auth is defined and DOM is ready -->
     <!-- We will move the JS logic here for simplicity -->
-    <!-- <script src="index.js" defer></script> -->
 
     <script>
       // DOM Elements
@@ -472,11 +467,9 @@
 
       const errorMessageDiv = document.getElementById('error-message');
 
-      const textInput = document.getElementById('textInput');
       const resultsDiv = document.getElementById('results');
 
       // New/Updated Elements for Text/PDF analysis differentiation
-      const analyzeTextButton = document.getElementById('analyzeTextButton');
       const pdfInput = document.getElementById('pdfInput');
       const analyzePdfButton = document.getElementById('analyzePdfButton');
       const pdfUploadStatusSpan = document.getElementById('pdf-upload-status');
@@ -527,7 +520,7 @@
         headerSignupButton.style.display = 'none';
         headerLogoutButton.style.display = 'none';
         profileIconButton.style.display = 'none'; // Hide profile icon
-        profileIcontent = ''; // Clear profile icon text
+        profileIconButton.textContent = ''; // Clear profile icon text
         if (showLogin) {
           loginSection.style.display = 'block';
           signupSection.style.display = 'none';
@@ -556,7 +549,6 @@
         clearAuthForms(); // Clear forms after successful login/signup
         // Optionally clear analysis results/input on showing the screen
         resultsDiv.innerHTML = 'Enter text or upload a PDF and click analyze.';
-        textInput.value = '';
         pdfInput.value = null; // Clear the selected file
         analyzePdfButton.disabled = true; // Disable PDF button initially
         pdfUploadStatusSpan.textContent = ''; // Clear status
@@ -772,91 +764,6 @@
       });
 
       // --- Analysis Logic (existing, slightly modified) ---
-      analyzeTextButton.addEventListener('click', async () => {
-        const user = auth.currentUser; // Get current user
-        if (!user) {
-          resultsDiv.innerHTML = 'Please log in first.'; // Should not happen if UI is correct, but good failsafe
-          showAuthScreen(true); // Redirect to login
-          return;
-        }
-
-        const textToAnalyze = textInput.value.trim();
-        if (!textToAnalyze) {
-          resultsDiv.innerHTML = 'Please enter some text to analyze.';
-          return;
-        }
-
-        resultsDiv.innerHTML = 'Analyzing...';
-
-        try {
-          const token = await user.getIdToken(); // Get Firebase ID token
-
-          // Make a POST request to the backend API
-          const response = await fetch('/api/analyze-terms', {
-            method: 'POST',
-            headers: {
-              'Content-Type': 'application/json',
-              // Add the Authorization header with the Firebase ID token
-              Authorization: `Bearer ${token}`,
-            },
-            body: JSON.stringify({ text: textToAnalyze }),
-          });
-
-          if (!response.ok) {
-            // Try to parse error message from backend
-            let errorMsg = `Server error: ${response.status}`;
-            try {
-              const errorData = await response.json();
-              errorMsg = errorData.message || errorMsg;
-            } catch (parseError) {
-              // Ignore if response is not JSON
-              errorMsg = (await response.text()) || errorMsg; // Use text response if available
-            }
-            throw new Error(errorMsg);
-          }
-
-          const terms = await response.json();
-
-          if (!Array.isArray(terms)) {
-            throw new Error('Invalid response format from server.');
-          }
-
-          if (terms.length === 0) {
-            resultsDiv.innerHTML =
-              'No significant terms found (or only stop words/numbers).';
-          } else {
-            // Format and display ranked terms
-            resultsDiv.innerHTML = ''; // Clear previous results
-            terms.forEach((termData) => {
-              if (
-                termData &&
-                typeof termData.term !== 'undefined' &&
-                typeof termData.frequency !== 'undefined'
-              ) {
-                const itemDiv = document.createElement('div');
-                itemDiv.classList.add('result-item');
-                // Use textContent for security instead of innerHTML where possible
-                const termSpan = document.createElement('span');
-                termSpan.className = 'term';
-                termSpan.textContent = termData.term; // Safely sets text
-
-                const freqSpan = document.createElement('span');
-                freqSpan.className = 'freq';
-                freqSpan.textContent = ` (Frequency: ${termData.frequency})`;
-
-                itemDiv.appendChild(termSpan);
-                itemDiv.appendChild(freqSpan);
-                resultsDiv.appendChild(itemDiv);
-              } else {
-                console.warn('Received invalid term data:', termData);
-              }
-            });
-          }
-        } catch (error) {
-          console.error('Analysis failed:', error);
-          resultsDiv.innerHTML = `Error performing analysis: ${error.message}`;
-        }
-      });
 
       // Basic HTML escaping function (kept for reference, but prefer textContent)
       function escapeHtml(unsafe) {
@@ -1019,55 +926,6 @@
             }
             profileErrorMessageDiv.textContent = message;
           }
-        }
-      });
-
-      // Event Listener for Text Analysis Button
-      analyzeTextButton.addEventListener('click', async () => {
-        const user = auth.currentUser;
-        if (!user) {
-          resultsDiv.innerHTML = 'Please log in first.';
-          showAuthScreen(true);
-          return;
-        }
-
-        const textToAnalyze = textInput.value.trim();
-        if (!textToAnalyze) {
-          resultsDiv.innerHTML = 'Please enter some text to analyze.';
-          return;
-        }
-
-        resultsDiv.innerHTML = 'Analyzing text...';
-        pdfUploadStatusSpan.textContent = ''; // Clear PDF status
-
-        try {
-          const token = await user.getIdToken();
-          const response = await fetch('/api/analyze-terms', {
-            // Existing endpoint for text
-            method: 'POST',
-            headers: {
-              'Content-Type': 'application/json',
-              Authorization: `Bearer ${token}`,
-            },
-            body: JSON.stringify({ text: textToAnalyze }),
-          });
-
-          if (!response.ok) {
-            let errorMsg = `Server error: ${response.status}`;
-            try {
-              const errorData = await response.json();
-              errorMsg = errorData.message || errorMsg;
-            } catch (parseError) {
-              errorMsg = (await response.text()) || errorMsg;
-            }
-            throw new Error(errorMsg);
-          }
-
-          const terms = await response.json();
-          displayAnalysisResults(terms);
-        } catch (error) {
-          console.error('Text analysis failed:', error);
-          resultsDiv.innerHTML = `Error performing text analysis: ${error.message}`;
         }
       });
 
