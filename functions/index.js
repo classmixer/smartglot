@@ -134,25 +134,16 @@ exports.analyzePdf = functions.https.onCall(async (data, context) => {
       if (extractedText && extractedText.length > 0) {
         const words = extractedText.split(/\s+/); // Split by whitespace
         const filteredWords = words.filter((word) => {
-          // Basic filter for Korean: keep words with 2 or more characters.
-          // This helps remove isolated Jamo (자음/모음) like "ㄱ", "ㅏ".
-          // You might want to refine this based on common non-words.
-          if (word.length < 2) {
-            // Simple check for common single Korean characters (자음/모음)
-            // This is a basic heuristic and might need more sophisticated NLP for perfect accuracy
-            const koreanCharRegex = /^[ㄱ-ㅎㅏ-ㅣ가-힣]$/;
-            if (koreanCharRegex.test(word)) {
-              console.log(
-                `[${uid}] Filtering out short Korean word: "${word}"`,
-              );
-              return false;
-            }
-          }
-          return true;
+          // 이 안의 로직을 검토하거나 잠시 비활성화
+          // 예시:
+          // if (word.length < 3) { // 사용자가 직접 수정한 부분일 수 있음
+          //   return false;
+          // }
+          return true; // 임시로 모든 단어 통과
         });
         extractedText = filteredWords.join(' ');
         console.log(
-          `[${uid}] Text after filtering short words: ${extractedText.length} characters.`,
+          `[${uid}] Text after CUSTM filtering: ${extractedText.length} characters.`,
         );
       }
     } else {
@@ -214,7 +205,7 @@ exports.analyzePdf = functions.https.onCall(async (data, context) => {
     );
     const response = await axios.post(
       analysisEndpoint,
-      { text: extractedText },
+      { korean_content: extractedText },
       {
         // Restore the config object with headers
         headers: {
