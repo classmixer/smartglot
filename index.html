@@ -1,9 +1,1001 @@
-<!DOCTYPE html>
+<!doctype html>
 <html>
-<head>
-    <title>Smartglot</title>
-</head>
-<body>
-    <h1>Welcome to Smartglot</h1>
-</body>
-</html> 
+  <head>
+    <title>Smartglot - Term Analysis</title>
+    <!-- Firebase SDK scripts -->
+    <script src="https://www.gstatic.com/firebasejs/9.6.7/firebase-app-compat.js"></script>
+    <script src="https://www.gstatic.com/firebasejs/9.6.7/firebase-auth-compat.js"></script>
+    <script>
+      // Firebase 구성
+      var firebaseConfig = {
+        apiKey: 'AIzaSyA0iVwY44v9lokoS2Zm_jl9pYc8pV6Nje8', // 실제 키로 교체하세요
+        authDomain: 'smartglot.firebaseapp.com',
+        projectId: 'smartglot',
+        storageBucket: 'smartglot.firebasestorage.app', // 버킷 이름 확인
+        messagingSenderId: '516870202505',
+        appId: '1:516870202505:web:6d7753b2ae644def4e5258',
+      };
+
+      // Initialize Firebase
+      firebase.initializeApp(firebaseConfig);
+      const auth = firebase.auth();
+    </script>
+
+    <style>
+      /* Basic styling */
+      body {
+        font-family: sans-serif;
+        padding: 0; /* Remove body padding */
+        margin: 0; /* Remove body margin */
+        display: flex;
+        flex-direction: column;
+        min-height: 100vh;
+      }
+      .container {
+        padding: 20px;
+        flex-grow: 1;
+      }
+      header {
+        background-color: #f1f1f1;
+        padding: 10px 20px;
+        display: flex;
+        justify-content: space-between;
+        align-items: center;
+        border-bottom: 1px solid #ccc;
+      }
+      header h1 {
+        margin: 0;
+        font-size: 1.5em;
+      }
+      header nav button {
+        margin-left: 10px;
+        padding: 8px 12px;
+      }
+      #welcome-container {
+        text-align: center;
+        padding: 40px 20px;
+      }
+      #welcome-container h2 {
+        margin-bottom: 20px;
+      }
+      #welcome-container p {
+        max-width: 600px;
+        margin: 0 auto 20px auto;
+        line-height: 1.6;
+      }
+      #welcome-container button {
+        margin-top: 10px;
+        padding: 12px 20px;
+        font-size: 1.1em;
+      }
+      textarea {
+        width: 80%;
+        min-height: 150px;
+        margin-bottom: 10px;
+        display: block;
+      }
+      button {
+        padding: 10px 15px;
+        cursor: pointer;
+      }
+      input[type='email'],
+      input[type='password'] {
+        padding: 8px;
+        margin-right: 5px;
+        margin-bottom: 10px; /* Add space below inputs */
+        display: block; /* Make inputs block level */
+        width: calc(100% - 18px); /* Adjust width */
+        max-width: 300px; /* Max width for inputs */
+      }
+      #results {
+        margin-top: 20px;
+        border: 1px solid #ccc;
+        padding: 10px;
+        min-height: 50px;
+        background-color: #f9f9f9;
+      }
+      .result-item {
+        border-bottom: 1px dotted #eee;
+        padding: 5px 0;
+      }
+      .result-item .term {
+        font-weight: bold;
+      }
+      .result-item .freq {
+        margin-left: 10px;
+        color: #555;
+      }
+      #auth-container,
+      #analysis-container {
+        margin: 30px auto; /* Center containers */
+        padding: 20px;
+        border: 1px solid #eee;
+        border-radius: 5px;
+        max-width: 500px; /* Limit width */
+        display: none; /* Initially hidden */
+      }
+      #auth-container h2,
+      #analysis-container h2 {
+        text-align: center;
+        margin-bottom: 20px;
+      }
+      #user-status {
+        /* Renamed from user-info */
+        text-align: right;
+        font-size: 0.9em;
+        color: #555;
+      }
+      .auth-section {
+        margin-bottom: 15px;
+        padding-top: 10px;
+        border-top: 1px solid #eee;
+      }
+      .auth-section:first-of-type {
+        border-top: none;
+        padding-top: 0;
+      }
+      .auth-section h3 {
+        margin-top: 0;
+        margin-bottom: 15px;
+      }
+      #error-message {
+        color: red;
+        margin-top: 10px;
+        margin-bottom: 15px; /* Add margin below error */
+        font-size: 0.9em;
+        min-height: 1.2em; /* Reserve space for error */
+        text-align: center;
+      }
+      .input-error {
+        border: 1px solid red;
+      }
+
+      /* Initial display states */
+      #auth-container,
+      #analysis-container,
+      #headerLogoutButton {
+        display: none;
+      }
+      #welcome-container,
+      #headerLoginButton,
+      #headerSignupButton {
+        display: block; /* Adjust display for header buttons later */
+      }
+      header nav {
+        /* Container for header buttons */
+        display: flex;
+        align-items: center;
+      }
+
+      /* Profile Icon Style */
+      .profile-icon {
+        display: inline-block;
+        width: 36px;
+        height: 36px;
+        border-radius: 50%; /* 원형 모양 */
+        background-color: #007bff; /* 배경색 */
+        color: white; /* 글자색 */
+        text-align: center;
+        line-height: 36px; /* 글자 세로 중앙 정렬 */
+        font-size: 1em;
+        font-weight: bold;
+        cursor: pointer;
+        border: none;
+        margin-right: 15px; /* 로그아웃 버튼과의 간격 */
+      }
+
+      /* Password visibility toggle styles */
+      .password-wrapper {
+        position: relative;
+        width: calc(100% - 18px); /* Match input width style */
+        max-width: 300px; /* Match input max-width */
+        margin-bottom: 10px; /* Match input margin-bottom */
+        /* Remove auto margins to align left like other inputs */
+        margin-left: 0; /* Explicitly set to 0 or remove for default */
+        margin-right: 0; /* Explicitly set to 0 or remove for default */
+      }
+      .password-wrapper input[type='password'],
+      .password-wrapper input[type='text'] {
+        /* Apply to text type too when toggled */
+        width: 100%; /* Input takes full width of wrapper */
+        padding-right: 40px; /* Make space for the icon */
+        box-sizing: border-box; /* Include padding in width calculation */
+        /* Inherit other input styles if needed */
+        padding: 8px;
+        margin: 0; /* Remove default margins */
+        display: block;
+      }
+      .toggle-password {
+        position: absolute;
+        right: 5px; /* Position inside the input area */
+        top: 50%;
+        transform: translateY(-50%);
+        background: none;
+        border: none;
+        cursor: pointer;
+        padding: 5px;
+        font-size: 1.2em; /* Adjust icon size */
+        line-height: 1; /* Prevent extra spacing */
+        color: #555; /* Icon color */
+      }
+      .toggle-password:focus {
+        outline: none;
+      }
+    </style>
+  </head>
+  <body>
+    <header>
+      <h1>Smartglot</h1>
+      <nav>
+        <button
+          id="profile-icon-button"
+          class="profile-icon"
+          style="display: none"
+        ></button>
+        <button id="headerLoginButton">Login</button>
+        <button id="headerSignupButton">Sign Up</button>
+        <button id="headerLogoutButton">Logout</button>
+      </nav>
+    </header>
+
+    <div class="container">
+      <!-- Welcome Section -->
+      <div id="welcome-container">
+        <h2>Welcome to Smartglot!</h2>
+        <p>
+          Analyze text to discover the most frequent and significant terms.
+          Smartglot helps you understand key concepts in your documents quickly
+          and efficiently.
+        </p>
+        <p>Log in or sign up to start analyzing your text.</p>
+        <button id="getStartedButton">Get Started</button>
+      </div>
+
+      <!-- Authentication Section -->
+      <div id="auth-container">
+        <h2>Authentication</h2>
+        <div id="error-message"></div>
+
+        <!-- Login Form -->
+        <div id="login-section" class="auth-section">
+          <h3>Login</h3>
+          <input type="email" id="loginEmail" placeholder="Email" />
+          <div class="password-wrapper">
+            <input type="password" id="loginPassword" placeholder="Password" />
+            <button
+              type="button"
+              class="toggle-password"
+              aria-label="Show password"
+            >
+              🔒
+            </button>
+          </div>
+          <button id="loginButton">Login</button>
+          <p>
+            Don't have an account? <a href="#" id="showSignupLink">Sign Up</a>
+          </p>
+        </div>
+
+        <!-- Sign Up Form -->
+        <div id="signup-section" class="auth-section" style="display: none">
+          <h3>Sign Up</h3>
+          <input type="email" id="signupEmail" placeholder="Email" />
+          <div class="password-wrapper">
+            <input type="password" id="signupPassword" placeholder="Password" />
+            <button
+              type="button"
+              class="toggle-password"
+              aria-label="Show password"
+            >
+              🔒
+            </button>
+          </div>
+          <div class="password-wrapper">
+            <input
+              type="password"
+              id="signupPasswordConfirm"
+              placeholder="Confirm Password"
+            />
+            <button
+              type="button"
+              class="toggle-password"
+              aria-label="Show password"
+            >
+              🔒
+            </button>
+          </div>
+          <button id="signupButton">Sign Up</button>
+          <p>
+            Already have an account? <a href="#" id="showLoginLink">Login</a>
+          </p>
+        </div>
+        <!-- Removed the separate logout button from here -->
+      </div>
+
+      <!-- Analysis Section -->
+      <div id="analysis-container">
+        <h2>Enter Text to Analyze</h2>
+        <textarea
+          id="textInput"
+          placeholder="Paste your text here..."
+        ></textarea>
+        <button id="analyzeButton">Analyze Terms</button>
+
+        <h2>Top Terms</h2>
+        <div id="results">Enter text above and click analyze.</div>
+      </div>
+    </div>
+    <!-- /container -->
+
+    <!-- Profile Screen Section (New) -->
+    <div
+      id="profile-container"
+      style="
+        display: none;
+        margin: 30px auto;
+        padding: 20px;
+        border: 1px solid #eee;
+        border-radius: 5px;
+        max-width: 500px;
+        text-align: center;
+      "
+    >
+      <h2>Profile</h2>
+      <p id="profile-email"></p>
+
+      <!-- Password Change Section -->
+      <div
+        style="margin-top: 20px; padding-top: 15px; border-top: 1px solid #eee"
+      >
+        <h3>Change Password</h3>
+        <div class="password-wrapper">
+          <input
+            type="password"
+            id="currentPassword"
+            placeholder="Current Password"
+          />
+          <button
+            type="button"
+            class="toggle-password"
+            aria-label="Show password"
+          >
+            🔒
+          </button>
+        </div>
+        <div class="password-wrapper">
+          <input type="password" id="newPassword" placeholder="New Password" />
+          <button
+            type="button"
+            class="toggle-password"
+            aria-label="Show password"
+          >
+            🔒
+          </button>
+        </div>
+        <div class="password-wrapper">
+          <input
+            type="password"
+            id="newPasswordConfirm"
+            placeholder="Confirm New Password"
+          />
+          <button
+            type="button"
+            class="toggle-password"
+            aria-label="Show password"
+          >
+            🔒
+          </button>
+        </div>
+        <button id="changePasswordButton">Change Password</button>
+        <p
+          id="password-change-message"
+          style="margin-top: 10px; font-size: 0.9em; min-height: 1.2em"
+        ></p>
+      </div>
+
+      <button id="backToAnalysisButton" style="margin-top: 20px">
+        Back to Analysis
+      </button>
+      <button
+        id="deleteAccountButton"
+        style="background-color: #dc3545; color: white; margin-top: 20px"
+      >
+        Delete Account
+      </button>
+      <p
+        id="profile-error-message"
+        style="
+          color: red;
+          margin-top: 10px;
+          font-size: 0.9em;
+          min-height: 1.2em;
+        "
+      ></p>
+    </div>
+
+    <!-- Firebase Initialization Script (already done above) -->
+    <script>
+      // const firebaseConfig = { /* ... */ }; // Already defined
+      // firebase.initializeApp(firebaseConfig); // Already initialized
+      // const auth = firebase.auth(); // Already defined
+    </script>
+
+    <!-- Load index.js AFTER auth is defined and DOM is ready -->
+    <!-- We will move the JS logic here for simplicity -->
+    <!-- <script src="index.js" defer></script> -->
+
+    <script>
+      // DOM Elements
+      const welcomeContainer = document.getElementById('welcome-container');
+      const authContainer = document.getElementById('auth-container');
+      const analysisContainer = document.getElementById('analysis-container');
+      const profileContainer = document.getElementById('profile-container'); // Profile container
+
+      const headerLoginButton = document.getElementById('headerLoginButton');
+      const headerSignupButton = document.getElementById('headerSignupButton');
+      const headerLogoutButton = document.getElementById('headerLogoutButton');
+      const profileIconButton = document.getElementById('profile-icon-button'); // Profile icon button
+
+      const getStartedButton = document.getElementById('getStartedButton'); // New button
+      const showSignupLink = document.getElementById('showSignupLink');
+      const showLoginLink = document.getElementById('showLoginLink');
+
+      const loginSection = document.getElementById('login-section');
+      const signupSection = document.getElementById('signup-section');
+      const loginEmailInput = document.getElementById('loginEmail');
+      const loginPasswordInput = document.getElementById('loginPassword');
+      const loginButton = document.getElementById('loginButton'); // Inside auth container
+
+      const signupEmailInput = document.getElementById('signupEmail');
+      const signupPasswordInput = document.getElementById('signupPassword');
+      const signupPasswordConfirmInput = document.getElementById(
+        'signupPasswordConfirm',
+      );
+      const signupButton = document.getElementById('signupButton'); // Inside auth container
+
+      const errorMessageDiv = document.getElementById('error-message');
+
+      const textInput = document.getElementById('textInput');
+      const analyzeButton = document.getElementById('analyzeButton');
+      const resultsDiv = document.getElementById('results');
+
+      // Profile screen elements
+      const currentPasswordInput = document.getElementById('currentPassword');
+      const newPasswordInput = document.getElementById('newPassword');
+      const newPasswordConfirmInput =
+        document.getElementById('newPasswordConfirm');
+      const changePasswordButton = document.getElementById(
+        'changePasswordButton',
+      );
+      const passwordChangeMessageP = document.getElementById(
+        'password-change-message',
+      );
+      const profileEmailP = document.getElementById('profile-email');
+      const backToAnalysisButton = document.getElementById(
+        'backToAnalysisButton',
+      );
+      const deleteAccountButton = document.getElementById(
+        'deleteAccountButton',
+      );
+      const profileErrorMessageDiv = document.getElementById(
+        'profile-error-message',
+      );
+
+      // --- UI Control Functions ---
+      function showWelcomeScreen() {
+        welcomeContainer.style.display = 'block';
+        authContainer.style.display = 'none';
+        analysisContainer.style.display = 'none';
+        profileContainer.style.display = 'none'; // Hide profile
+        headerLoginButton.style.display = 'inline-block'; // Use inline-block for buttons
+        headerSignupButton.style.display = 'inline-block';
+        headerLogoutButton.style.display = 'none';
+        profileIconButton.style.display = 'none'; // Hide profile icon
+        profileIconButton.textContent = ''; // Clear profile icon text
+        clearAuthError();
+        clearAuthForms();
+      }
+
+      function showAuthScreen(showLogin = true) {
+        welcomeContainer.style.display = 'none';
+        authContainer.style.display = 'block';
+        analysisContainer.style.display = 'none';
+        profileContainer.style.display = 'none'; // Hide profile
+        headerLoginButton.style.display = 'none'; // Hide header buttons when auth form is shown
+        headerSignupButton.style.display = 'none';
+        headerLogoutButton.style.display = 'none';
+        profileIconButton.style.display = 'none'; // Hide profile icon
+        profileIcontent = ''; // Clear profile icon text
+        if (showLogin) {
+          loginSection.style.display = 'block';
+          signupSection.style.display = 'none';
+        } else {
+          loginSection.style.display = 'none';
+          signupSection.style.display = 'block';
+        }
+        clearAuthError();
+      }
+
+      function showAnalysisScreen(user) {
+        welcomeContainer.style.display = 'none';
+        authContainer.style.display = 'none';
+        analysisContainer.style.display = 'block';
+        profileContainer.style.display = 'none'; // Hide profile
+        headerLoginButton.style.display = 'none';
+        headerSignupButton.style.display = 'none';
+        headerLogoutButton.style.display = 'inline-block';
+
+        // Set profile icon
+        const emailPrefix = user.email.substring(0, 2).toUpperCase();
+        profileIconButton.textContent = emailPrefix;
+        profileIconButton.style.display = 'inline-block';
+
+        clearAuthError();
+        clearAuthForms(); // Clear forms after successful login/signup
+        // Optionally clear analysis results/input on showing the screen
+        resultsDiv.innerHTML = 'Enter text above and click analyze.';
+        textInput.value = '';
+      }
+
+      // --- Event Listeners for UI Navigation ---
+      headerLoginButton.addEventListener('click', () => showAuthScreen(true));
+      headerSignupButton.addEventListener('click', () => showAuthScreen(false));
+      getStartedButton.addEventListener('click', () => showAuthScreen(true)); // Get Started shows login
+      showSignupLink.addEventListener('click', (e) => {
+        e.preventDefault();
+        showAuthScreen(false);
+      });
+      showLoginLink.addEventListener('click', (e) => {
+        e.preventDefault();
+        showAuthScreen(true);
+      });
+
+      // --- Password Visibility Toggle Logic ---
+      const togglePasswordButtons =
+        document.querySelectorAll('.toggle-password');
+
+      togglePasswordButtons.forEach((button) => {
+        button.addEventListener('click', () => {
+          const passwordInput = button.previousElementSibling;
+          const type =
+            passwordInput.getAttribute('type') === 'password'
+              ? 'text'
+              : 'password';
+          passwordInput.setAttribute('type', type);
+
+          // Change the icon based on the type
+          button.textContent = type === 'password' ? '🔒' : '👁️';
+          // Optionally change aria-label for accessibility
+          button.setAttribute(
+            'aria-label',
+            type === 'password' ? 'Show password' : 'Hide password',
+          );
+        });
+      });
+
+      // --- Authentication Logic ---
+
+      // Function to display error messages
+      function showAuthError(message) {
+        errorMessageDiv.textContent = message;
+        // Clear previous errors visually
+        loginEmailInput.classList.remove('input-error');
+        loginPasswordInput.classList.remove('input-error');
+        signupEmailInput.classList.remove('input-error');
+        signupPasswordInput.classList.remove('input-error');
+        signupPasswordConfirmInput.classList.remove('input-error');
+      }
+
+      // Function to clear error messages and input styles
+      function clearAuthError() {
+        errorMessageDiv.textContent = '';
+        loginEmailInput.classList.remove('input-error');
+        loginPasswordInput.classList.remove('input-error');
+        signupEmailInput.classList.remove('input-error');
+        signupPasswordInput.classList.remove('input-error');
+        signupPasswordConfirmInput.classList.remove('input-error');
+      }
+
+      // Function to clear login/signup form inputs
+      function clearAuthForms() {
+        loginEmailInput.value = '';
+        loginPasswordInput.value = '';
+        signupEmailInput.value = '';
+        signupPasswordInput.value = '';
+        signupPasswordConfirmInput.value = '';
+      }
+
+      // Sign Up Button (inside auth container)
+      signupButton.addEventListener('click', async () => {
+        clearAuthError();
+        const email = signupEmailInput.value;
+        const password = signupPasswordInput.value;
+        const passwordConfirm = signupPasswordConfirmInput.value;
+
+        if (password !== passwordConfirm) {
+          showAuthError('Passwords do not match.');
+          signupPasswordInput.classList.add('input-error');
+          signupPasswordConfirmInput.classList.add('input-error');
+          return;
+        }
+
+        if (!email || !password) {
+          showAuthError('Email and password cannot be empty.');
+          if (!email) signupEmailInput.classList.add('input-error');
+          if (!password) {
+            signupPasswordInput.classList.add('input-error');
+            signupPasswordConfirmInput.classList.add('input-error');
+          }
+          return;
+        }
+
+        try {
+          await auth.createUserWithEmailAndPassword(email, password);
+          console.log('User signed up successfully!');
+          // UI will update via onAuthStateChanged, which calls showAnalysisScreen
+        } catch (error) {
+          console.error('Sign up failed:', error);
+          if (
+            error.code === 'auth/invalid-email' ||
+            error.code === 'auth/email-already-in-use'
+          ) {
+            signupEmailInput.classList.add('input-error');
+          } else if (error.code === 'auth/weak-password') {
+            signupPasswordInput.classList.add('input-error');
+            signupPasswordConfirmInput.classList.add('input-error');
+          }
+          showAuthError(`Sign up failed: ${error.message}`);
+        }
+      });
+
+      // Login Button (inside auth container)
+      loginButton.addEventListener('click', async () => {
+        clearAuthError();
+        const email = loginEmailInput.value;
+        const password = loginPasswordInput.value;
+
+        if (!email || !password) {
+          showAuthError('Email and password cannot be empty.');
+          if (!email) loginEmailInput.classList.add('input-error');
+          if (!password) loginPasswordInput.classList.add('input-error');
+          return;
+        }
+
+        try {
+          await auth.signInWithEmailAndPassword(email, password);
+          console.log('User logged in successfully!');
+          // UI will update via onAuthStateChanged, which calls showAnalysisScreen
+        } catch (error) {
+          console.error('Login failed:', error);
+          if (
+            error.code === 'auth/invalid-email' ||
+            error.code === 'auth/user-not-found' ||
+            error.code === 'auth/invalid-credential'
+          ) {
+            loginEmailInput.classList.add('input-error');
+          }
+          if (
+            error.code === 'auth/wrong-password' ||
+            error.code === 'auth/invalid-credential'
+          ) {
+            loginPasswordInput.classList.add('input-error');
+          }
+          showAuthError(`Login failed: ${error.message}`);
+        }
+      });
+
+      // Logout (Header Button)
+      headerLogoutButton.addEventListener('click', async () => {
+        clearAuthError(); // Clear any lingering errors
+        try {
+          await auth.signOut();
+          console.log('User logged out successfully!');
+          // UI will update via onAuthStateChanged, which calls showWelcomeScreen
+        } catch (error) {
+          console.error('Logout failed:', error);
+          // Show error somewhere? Maybe an alert for logout errors?
+          alert(`Logout failed: ${error.message}`);
+        }
+      });
+
+      // Add Enter key listeners to input fields
+      loginEmailInput.addEventListener('keypress', (event) => {
+        if (event.key === 'Enter') {
+          event.preventDefault(); // Prevent default form submission
+          loginButton.click();
+        }
+      });
+      loginPasswordInput.addEventListener('keypress', (event) => {
+        if (event.key === 'Enter') {
+          event.preventDefault();
+          loginButton.click();
+        }
+      });
+
+      signupEmailInput.addEventListener('keypress', (event) => {
+        if (event.key === 'Enter') {
+          event.preventDefault();
+          signupButton.click();
+        }
+      });
+      signupPasswordInput.addEventListener('keypress', (event) => {
+        if (event.key === 'Enter') {
+          event.preventDefault();
+          signupButton.click();
+        }
+      });
+      signupPasswordConfirmInput.addEventListener('keypress', (event) => {
+        if (event.key === 'Enter') {
+          event.preventDefault();
+          signupButton.click();
+        }
+      });
+
+      // Listen for Auth State Changes
+      auth.onAuthStateChanged((user) => {
+        if (user) {
+          // User is signed in
+          // Check if the profile screen is currently displayed. If so, keep it.
+          // Otherwise, show the analysis screen.
+          if (profileContainer.style.display !== 'block') {
+            showAnalysisScreen(user);
+          }
+        } else {
+          // User is signed out
+          showWelcomeScreen();
+        }
+      });
+
+      // --- Analysis Logic (existing, slightly modified) ---
+      analyzeButton.addEventListener('click', async () => {
+        const user = auth.currentUser; // Get current user
+        if (!user) {
+          resultsDiv.innerHTML = 'Please log in first.'; // Should not happen if UI is correct, but good failsafe
+          showAuthScreen(true); // Redirect to login
+          return;
+        }
+
+        const textToAnalyze = textInput.value.trim();
+        if (!textToAnalyze) {
+          resultsDiv.innerHTML = 'Please enter some text to analyze.';
+          return;
+        }
+
+        resultsDiv.innerHTML = 'Analyzing...';
+
+        try {
+          const token = await user.getIdToken(); // Get Firebase ID token
+
+          // Make a POST request to the backend API
+          const response = await fetch('/api/analyze-terms', {
+            method: 'POST',
+            headers: {
+              'Content-Type': 'application/json',
+              // Add the Authorization header with the Firebase ID token
+              Authorization: `Bearer ${token}`,
+            },
+            body: JSON.stringify({ text: textToAnalyze }),
+          });
+
+          if (!response.ok) {
+            // Try to parse error message from backend
+            let errorMsg = `Server error: ${response.status}`;
+            try {
+              const errorData = await response.json();
+              errorMsg = errorData.message || errorMsg;
+            } catch (parseError) {
+              // Ignore if response is not JSON
+              errorMsg = (await response.text()) || errorMsg; // Use text response if available
+            }
+            throw new Error(errorMsg);
+          }
+
+          const terms = await response.json();
+
+          if (!Array.isArray(terms)) {
+            throw new Error('Invalid response format from server.');
+          }
+
+          if (terms.length === 0) {
+            resultsDiv.innerHTML =
+              'No significant terms found (or only stop words/numbers).';
+          } else {
+            // Format and display ranked terms
+            resultsDiv.innerHTML = ''; // Clear previous results
+            terms.forEach((termData) => {
+              if (
+                termData &&
+                typeof termData.term !== 'undefined' &&
+                typeof termData.frequency !== 'undefined'
+              ) {
+                const itemDiv = document.createElement('div');
+                itemDiv.classList.add('result-item');
+                // Use textContent for security instead of innerHTML where possible
+                const termSpan = document.createElement('span');
+                termSpan.className = 'term';
+                termSpan.textContent = termData.term; // Safely sets text
+
+                const freqSpan = document.createElement('span');
+                freqSpan.className = 'freq';
+                freqSpan.textContent = ` (Frequency: ${termData.frequency})`;
+
+                itemDiv.appendChild(termSpan);
+                itemDiv.appendChild(freqSpan);
+                resultsDiv.appendChild(itemDiv);
+              } else {
+                console.warn('Received invalid term data:', termData);
+              }
+            });
+          }
+        } catch (error) {
+          console.error('Analysis failed:', error);
+          resultsDiv.innerHTML = `Error performing analysis: ${error.message}`;
+        }
+      });
+
+      // Basic HTML escaping function (kept for reference, but prefer textContent)
+      function escapeHtml(unsafe) {
+        if (typeof unsafe !== 'string') return ''; // Ensure input is a string
+        return unsafe
+          .replace(/&/g, '&amp;')
+          .replace(/</g, '&lt;')
+          .replace(/>/g, '&gt;')
+          .replace(/"/g, '&quot;')
+          .replace(/'/g, '&#039;');
+      }
+
+      // Initialize the view based on initial auth state when the script runs
+      // (onAuthStateChanged will handle subsequent changes)
+      const initialUser = auth.currentUser;
+      if (initialUser) {
+        showAnalysisScreen(initialUser);
+      } else {
+        showWelcomeScreen();
+      }
+
+      // Function to show the Profile Screen
+      function showProfileScreen(user) {
+        welcomeContainer.style.display = 'none';
+        authContainer.style.display = 'none';
+        analysisContainer.style.display = 'none';
+        profileContainer.style.display = 'block';
+
+        // Keep header buttons consistent with analysis screen
+        headerLoginButton.style.display = 'none';
+        headerSignupButton.style.display = 'none';
+        headerLogoutButton.style.display = 'inline-block';
+        profileIconButton.style.display = 'inline-block'; // Keep icon visible
+
+        profileEmailP.textContent = `Email: ${user.email}`;
+        profileErrorMessageDiv.textContent = ''; // Clear previous errors
+        passwordChangeMessageP.textContent = ''; // Clear password change message
+        // Clear password fields when showing the profile screen
+        currentPasswordInput.value = '';
+        newPasswordInput.value = '';
+        newPasswordConfirmInput.value = '';
+      }
+
+      // Event Listener for Profile Icon Button
+      profileIconButton.addEventListener('click', () => {
+        const user = auth.currentUser;
+        if (user) {
+          showProfileScreen(user);
+        }
+      });
+
+      // Event Listener for Back to Analysis Button
+      backToAnalysisButton.addEventListener('click', () => {
+        const user = auth.currentUser;
+        if (user) {
+          showAnalysisScreen(user); // Go back to analysis
+        }
+      });
+
+      // Event Listener for Change Password Button
+      changePasswordButton.addEventListener('click', async () => {
+        const user = auth.currentUser;
+        if (!user) return;
+
+        const currentPassword = currentPasswordInput.value;
+        const newPassword = newPasswordInput.value;
+        const newPasswordConfirm = newPasswordConfirmInput.value;
+
+        passwordChangeMessageP.textContent = ''; // Clear previous message
+        profileErrorMessageDiv.textContent = ''; // Clear general profile error
+
+        // Basic validation
+        if (!currentPassword || !newPassword || !newPasswordConfirm) {
+          passwordChangeMessageP.textContent =
+            '모든 비밀번호 필드를 입력해주세요.';
+          passwordChangeMessageP.style.color = 'red';
+          return;
+        }
+        if (newPassword !== newPasswordConfirm) {
+          passwordChangeMessageP.textContent =
+            '새 비밀번호가 일치하지 않습니다.';
+          passwordChangeMessageP.style.color = 'red';
+          newPasswordInput.classList.add('input-error');
+          newPasswordConfirmInput.classList.add('input-error');
+          return;
+        }
+        if (newPassword.length < 6) {
+          // Firebase default minimum length
+          passwordChangeMessageP.textContent =
+            '새 비밀번호는 6자 이상이어야 합니다.';
+          passwordChangeMessageP.style.color = 'red';
+          newPasswordInput.classList.add('input-error');
+          newPasswordConfirmInput.classList.add('input-error');
+          return;
+        }
+
+        // Clear input error styles
+        currentPasswordInput.classList.remove('input-error');
+        newPasswordInput.classList.remove('input-error');
+        newPasswordConfirmInput.classList.remove('input-error');
+
+        try {
+          // Re-authenticate the user
+          const credential = firebase.auth.EmailAuthProvider.credential(
+            user.email,
+            currentPassword,
+          );
+          await user.reauthenticateWithCredential(credential);
+
+          // If re-authentication is successful, update the password
+          await user.updatePassword(newPassword);
+
+          passwordChangeMessageP.textContent =
+            '비밀번호가 성공적으로 변경되었습니다.';
+          passwordChangeMessageP.style.color = 'green';
+          console.log('Password updated successfully!');
+
+          // Clear password fields after successful change
+          currentPasswordInput.value = '';
+          newPasswordInput.value = '';
+          newPasswordConfirmInput.value = '';
+        } catch (error) {
+          console.error('Password change failed:', error);
+          let message = '비밀번호 변경에 실패했습니다. 다시 시도해주세요.';
+          if (error.code === 'auth/wrong-password') {
+            message = '현재 비밀번호가 올바르지 않습니다.';
+            currentPasswordInput.classList.add('input-error');
+          } else if (error.code === 'auth/weak-password') {
+            message = '새 비밀번호가 너무 약합니다. (최소 6자 이상)';
+            newPasswordInput.classList.add('input-error');
+            newPasswordConfirmInput.classList.add('input-error');
+          }
+          passwordChangeMessageP.textContent = message;
+          passwordChangeMessageP.style.color = 'red';
+        }
+      });
+
+      // Event Listener for Delete Account Button
+      deleteAccountButton.addEventListener('click', async () => {
+        const user = auth.currentUser;
+        if (!user) return; // Should not happen if button is visible
+
+        profileErrorMessageDiv.textContent = ''; // Clear previous errors
+
+        const confirmation = confirm(
+          '정말 계정을 삭제하시겠습니까? 이 작업은 되돌릴 수 없습니다.',
+        );
+
+        if (confirmation) {
+          try {
+            await user.delete();
+            console.log('User account deleted successfully.');
+            // Auth state change will trigger showWelcomeScreen
+          } catch (error) {
+            console.error('Failed to delete account:', error);
+            let message = 'Failed to delete account. Please try again.';
+            if (error.code === 'auth/requires-recent-login') {
+              message =
+                'This operation requires recent login. Please log out and log back in before deleting your account.';
+            }
+            profileErrorMessageDiv.textContent = message;
+          }
+        }
+      });
+    </script>
+  </body>
+</html>
