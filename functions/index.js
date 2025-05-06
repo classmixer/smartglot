@@ -1,3 +1,4 @@
+/* eslint-env node */
 const functions = require('firebase-functions');
 const admin = require('firebase-admin');
 const vision = require('@google-cloud/vision');
@@ -128,6 +129,32 @@ exports.analyzePdf = functions.https.onCall(async (data, context) => {
       console.log(
         `[${uid}] Extracted ${extractedText.length} characters from PDF.`,
       );
+
+      // Filter out single-character words for Korean text
+      if (extractedText && extractedText.length > 0) {
+        const words = extractedText.split(/\s+/); // Split by whitespace
+        const filteredWords = words.filter((word) => {
+          // Basic filter for Korean: keep words with 2 or more characters.
+          // This helps remove isolated Jamo (자음/모음) like "ㄱ", "ㅏ".
+          // You might want to refine this based on common non-words.
+          if (word.length < 2) {
+            // Simple check for common single Korean characters (자음/모음)
+            // This is a basic heuristic and might need more sophisticated NLP for perfect accuracy
+            const koreanCharRegex = /^[ㄱ-ㅎㅏ-ㅣ가-힣]$/;
+            if (koreanCharRegex.test(word)) {
+              console.log(
+                `[${uid}] Filtering out short Korean word: "${word}"`,
+              );
+              return false;
+            }
+          }
+          return true;
+        });
+        extractedText = filteredWords.join(' ');
+        console.log(
+          `[${uid}] Text after filtering short words: ${extractedText.length} characters.`,
+        );
+      }
     } else {
       console.warn(
         `[${uid}] No fullTextAnnotation found in Vision AI response for ${gcsSourceUri}`,
@@ -201,7 +228,27 @@ exports.analyzePdf = functions.https.onCall(async (data, context) => {
 
     console.log(`[${uid}] Received analysis results from backend.`);
     // 7. Return Results
-    return response.data; // Assuming the backend returns the array of terms (original simple return)
+    // return response.data; // Assuming the backend returns the array of terms (original simple return)
+
+    // Filter terms by frequency (>= 2)
+    const terms = response.data;
+    if (Array.isArray(terms)) {
+      const filteredTerms = terms.filter(
+        (termData) =>
+          termData &&
+          typeof termData.frequency === 'number' &&
+          termData.frequency >= 2,
+      );
+      console.log(
+        `[${uid}] Returning ${filteredTerms.length} terms after frequency filtering (>=2). Original count: ${terms.length}`,
+      );
+      return filteredTerms;
+    } else {
+      console.warn(
+        `[${uid}] Received non-array data from analysis endpoint, returning as is.`,
+      );
+      return terms; // Or handle error appropriately
+    }
   } catch (error) {
     console.error(
       `[${uid}] Error calling analysis endpoint (${analysisEndpoint}):`,
