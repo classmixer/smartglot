@@ -10,12 +10,13 @@
     <script>
       // Firebase 구성
       var firebaseConfig = {
-        apiKey: 'AIzaSyA0iVwY44v9lokoS2Zm_jl9pYc8pV6Nje8', // 실제 키로 교체하세요
+        apiKey: 'AIzaSyA0iVwY44v9lokoS2Zm_jl9pYc8pV6Nje8', // Replace with your actual API key
         authDomain: 'smartglot.firebaseapp.com',
         projectId: 'smartglot',
-        storageBucket: 'smartglot.appspot.com', // *** Ensure this is the correct bucket name ***
+        storageBucket: 'smartglot.firebasestorage.app', // Corrected bucket name
         messagingSenderId: '516870202505',
-        appId: '1:516870202505:web:6d7753b2ae644def4e5258',
+        appId: '1:516870202505:web:377f047b4883a84fd69366',
+        measurementId: 'G-F0531X25FB',
       };
 
       // Initialize Firebase
@@ -1100,6 +1101,7 @@
       analyzePdfButton.addEventListener('click', async () => {
         const user = auth.currentUser;
         const file = pdfInput.files[0];
+        let filePath = null; // Declare filePath outside the try block
 
         if (!user) {
           resultsDiv.innerHTML = 'Please log in first.';
@@ -1120,7 +1122,7 @@
 
           // 1. Upload PDF to Cloud Storage (using Firebase SDK)
           // Create a unique file path, e.g., using user ID and timestamp
-          const filePath = `uploads/${user.uid}/${Date.now()}_${file.name}`;
+          filePath = `uploads/${user.uid}/${Date.now()}_${file.name}`; // Assign value here
           const storageRef = firebase.storage().ref(filePath); // Use compat storage
           const uploadTask = await storageRef.put(file);
           const downloadURL = await uploadTask.ref.getDownloadURL(); // Optional: Get URL if needed
@@ -1143,8 +1145,9 @@
           resultsDiv.innerHTML = `Error during PDF analysis: ${error.message}`;
           pdfUploadStatusSpan.textContent = 'Error.';
           // Attempt cleanup for callable errors too
-          const storageRef = storage.ref(filePath); // Need filePath here
           if (filePath) {
+            // Check if filePath was assigned before trying to use it
+            const storageRef = storage.ref(filePath); // Need filePath here
             try {
               await storageRef.delete();
               console.log('Cleaned up failed upload.');
