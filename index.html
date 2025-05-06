@@ -5,13 +5,15 @@
     <!-- Firebase SDK scripts -->
     <script src="https://www.gstatic.com/firebasejs/9.6.7/firebase-app-compat.js"></script>
     <script src="https://www.gstatic.com/firebasejs/9.6.7/firebase-auth-compat.js"></script>
+    <script src="https://www.gstatic.com/firebasejs/9.6.7/firebase-storage-compat.js"></script>
+    <script src="https://www.gstatic.com/firebasejs/9.6.7/firebase-functions-compat.js"></script>
     <script>
       // Firebase 구성
       var firebaseConfig = {
         apiKey: 'AIzaSyA0iVwY44v9lokoS2Zm_jl9pYc8pV6Nje8', // 실제 키로 교체하세요
         authDomain: 'smartglot.firebaseapp.com',
         projectId: 'smartglot',
-        storageBucket: 'smartglot.firebasestorage.app', // 버킷 이름 확인
+        storageBucket: 'smartglot.appspot.com', // *** Ensure this is the correct bucket name ***
         messagingSenderId: '516870202505',
         appId: '1:516870202505:web:6d7753b2ae644def4e5258',
       };
@@ -19,6 +21,8 @@
       // Initialize Firebase
       firebase.initializeApp(firebaseConfig);
       const auth = firebase.auth();
+      const storage = firebase.storage(); // Initialize Cloud Storage
+      const functions = firebase.functions(); // Initialize Cloud Functions
     </script>
 
     <style>
@@ -314,15 +318,37 @@
 
       <!-- Analysis Section -->
       <div id="analysis-container">
-        <h2>Enter Text to Analyze</h2>
-        <textarea
-          id="textInput"
-          placeholder="Paste your text here..."
-        ></textarea>
-        <button id="analyzeButton">Analyze Terms</button>
+        <h2>Enter Text or Upload PDF to Analyze</h2>
+
+        <!-- Text Input -->
+        <div id="text-analysis-section">
+          <textarea
+            id="textInput"
+            placeholder="Paste your text here..."
+          ></textarea>
+          <button id="analyzeTextButton">Analyze Text</button>
+        </div>
+
+        <hr style="margin: 20px 0" />
+
+        <!-- PDF Input -->
+        <div id="pdf-analysis-section">
+          <label for="pdfInput">Or upload a PDF:</label>
+          <input
+            type="file"
+            id="pdfInput"
+            accept=".pdf"
+            style="display: block; margin-top: 5px; margin-bottom: 10px"
+          />
+          <button id="analyzePdfButton" disabled>Analyze PDF</button>
+          <span
+            id="pdf-upload-status"
+            style="margin-left: 10px; font-size: 0.9em"
+          ></span>
+        </div>
 
         <h2>Top Terms</h2>
-        <div id="results">Enter text above and click analyze.</div>
+        <div id="results">Enter text or upload a PDF and click analyze.</div>
       </div>
     </div>
     <!-- /container -->
@@ -459,6 +485,12 @@
       const analyzeButton = document.getElementById('analyzeButton');
       const resultsDiv = document.getElementById('results');
 
+      // New/Updated Elements for Text/PDF analysis differentiation
+      const analyzeTextButton = document.getElementById('analyzeTextButton');
+      const pdfInput = document.getElementById('pdfInput');
+      const analyzePdfButton = document.getElementById('analyzePdfButton');
+      const pdfUploadStatusSpan = document.getElementById('pdf-upload-status');
+
       // Profile screen elements
       const currentPasswordInput = document.getElementById('currentPassword');
       const newPasswordInput = document.getElementById('newPassword');
@@ -533,8 +565,11 @@
         clearAuthError();
         clearAuthForms(); // Clear forms after successful login/signup
         // Optionally clear analysis results/input on showing the screen
-        resultsDiv.innerHTML = 'Enter text above and click analyze.';
+        resultsDiv.innerHTML = 'Enter text or upload a PDF and click analyze.';
         textInput.value = '';
+        pdfInput.value = null; // Clear the selected file
+        analyzePdfButton.disabled = true; // Disable PDF button initially
+        pdfUploadStatusSpan.textContent = ''; // Clear status
       }
 
       // --- Event Listeners for UI Navigation ---
@@ -996,6 +1031,172 @@
           }
         }
       });
+
+      // Event Listener for Text Analysis Button
+      analyzeTextButton.addEventListener('click', async () => {
+        const user = auth.currentUser;
+        if (!user) {
+          resultsDiv.innerHTML = 'Please log in first.';
+          showAuthScreen(true);
+          return;
+        }
+
+        const textToAnalyze = textInput.value.trim();
+        if (!textToAnalyze) {
+          resultsDiv.innerHTML = 'Please enter some text to analyze.';
+          return;
+        }
+
+        resultsDiv.innerHTML = 'Analyzing text...';
+        pdfUploadStatusSpan.textContent = ''; // Clear PDF status
+
+        try {
+          const token = await user.getIdToken();
+          const response = await fetch('/api/analyze-terms', {
+            // Existing endpoint for text
+            method: 'POST',
+            headers: {
+              'Content-Type': 'application/json',
+              Authorization: `Bearer ${token}`,
+            },
+            body: JSON.stringify({ text: textToAnalyze }),
+          });
+
+          if (!response.ok) {
+            let errorMsg = `Server error: ${response.status}`;
+            try {
+              const errorData = await response.json();
+              errorMsg = errorData.message || errorMsg;
+            } catch (parseError) {
+              errorMsg = (await response.text()) || errorMsg;
+            }
+            throw new Error(errorMsg);
+          }
+
+          const terms = await response.json();
+          displayAnalysisResults(terms);
+        } catch (error) {
+          console.error('Text analysis failed:', error);
+          resultsDiv.innerHTML = `Error performing text analysis: ${error.message}`;
+        }
+      });
+
+      // Event Listener for PDF File Input Change
+      pdfInput.addEventListener('change', (event) => {
+        const file = event.target.files[0];
+        if (file && file.type === 'application/pdf') {
+          analyzePdfButton.disabled = false; // Enable button if PDF is selected
+          pdfUploadStatusSpan.textContent = `Selected: ${file.name}`;
+          resultsDiv.innerHTML = 'Click "Analyze PDF" to start.'; // Guide user
+        } else {
+          analyzePdfButton.disabled = true;
+          pdfUploadStatusSpan.textContent = file
+            ? 'Please select a PDF file.'
+            : '';
+          if (file) pdfInput.value = ''; // Clear invalid file selection
+        }
+      });
+
+      // Event Listener for PDF Analysis Button
+      analyzePdfButton.addEventListener('click', async () => {
+        const user = auth.currentUser;
+        const file = pdfInput.files[0];
+
+        if (!user) {
+          resultsDiv.innerHTML = 'Please log in first.';
+          showAuthScreen(true);
+          return;
+        }
+        if (!file) {
+          resultsDiv.innerHTML = 'Please select a PDF file first.';
+          return;
+        }
+
+        resultsDiv.innerHTML = 'Uploading PDF...';
+        analyzePdfButton.disabled = true; // Disable button during processing
+        pdfUploadStatusSpan.textContent = 'Uploading...';
+
+        try {
+          const token = await user.getIdToken(); // Get token for backend function
+
+          // 1. Upload PDF to Cloud Storage (using Firebase SDK)
+          // Create a unique file path, e.g., using user ID and timestamp
+          const filePath = `uploads/${user.uid}/${Date.now()}_${file.name}`;
+          const storageRef = firebase.storage().ref(filePath); // Use compat storage
+          const uploadTask = await storageRef.put(file);
+          const downloadURL = await uploadTask.ref.getDownloadURL(); // Optional: Get URL if needed
+
+          pdfUploadStatusSpan.textContent = 'Processing PDF...';
+          resultsDiv.innerHTML = 'Processing PDF with Vision AI...';
+
+          // 2. Call the Cloud Function to analyze the PDF
+          // Use Firebase Functions callable method
+          const analyzePdfFunction = functions.httpsCallable('analyzePdf');
+
+          const result = await analyzePdfFunction({ storagePath: filePath });
+          const terms = result.data; // Callable functions return data in result.data
+
+          displayAnalysisResults(terms); // Use the same display function
+
+          pdfUploadStatusSpan.textContent = 'Analysis complete.';
+        } catch (error) {
+          console.error('PDF analysis process failed:', error);
+          resultsDiv.innerHTML = `Error during PDF analysis: ${error.message}`;
+          pdfUploadStatusSpan.textContent = 'Error.';
+          // Attempt cleanup for callable errors too
+          const storageRef = storage.ref(filePath); // Need filePath here
+          if (filePath) {
+            try {
+              await storageRef.delete();
+              console.log('Cleaned up failed upload.');
+            } catch (deleteError) {
+              console.error('Failed to cleanup storage:', deleteError);
+            }
+          }
+        } finally {
+          // Re-enable button only if there's a file selected
+          analyzePdfButton.disabled = !pdfInput.files[0];
+        }
+      });
+
+      // --- Analysis Result Display Function (Refactored) ---
+      function displayAnalysisResults(terms) {
+        if (!Array.isArray(terms)) {
+          console.error('Invalid terms format received:', terms);
+          resultsDiv.innerHTML = 'Error: Invalid response format from server.';
+          return;
+        }
+
+        if (terms.length === 0) {
+          resultsDiv.innerHTML = 'No significant terms found.';
+        } else {
+          resultsDiv.innerHTML = ''; // Clear previous results
+          terms.forEach((termData) => {
+            if (
+              termData &&
+              typeof termData.term !== 'undefined' &&
+              typeof termData.frequency !== 'undefined'
+            ) {
+              const itemDiv = document.createElement('div');
+              itemDiv.classList.add('result-item');
+
+              const termSpan = document.createElement('span');
+              termSpan.className = 'term';
+              termSpan.textContent = termData.term;
+
+              const freqSpan = document.createElement('span');
+              freqSpan.className = 'freq';
+              freqSpan.textContent = ` (Frequency: ${termData.frequency})`;
+
+              itemDiv.appendChild(termSpan);
+              itemDiv.appendChild(freqSpan);
+              resultsDiv.appendChild(itemDiv);
+            } else {
+              console.warn('Received invalid term data:', termData);
+            }
+          });
+        }
+      }
     </script>
   </body>
 </html>
