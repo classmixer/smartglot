@@ -1,17 +1,8 @@
 [
   {
-    "origin": [
-      "http://localhost:8080", 
-      "https://smartglot--smartglot.asia-east1.hosted.app/", 
-      "https://smartglot--smartglot.asia-east1.hosted.app" 
-    ],
-    "method": ["GET", "HEAD", "POST", "PUT", "DELETE", "OPTIONS"],
-    "responseHeader": [
-      "Content-Type",
-      "Content-Length",
-      "Authorization",
-      "X-Firebase-Locale" 
-    ],
+    "origin": ["https://smartglot--smartglot.asia-east1.hosted.app"],
+    "method": ["GET", "HEAD", "OPTIONS"],
+    "responseHeader": ["Content-Type", "Access-Control-Allow-Origin"],
     "maxAgeSeconds": 3600
   }
 ]
