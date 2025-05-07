@@ -79,8 +79,10 @@ const STOP_WORDS = new Set([
   // Add others if needed
 ]);
 
-// 정적 파일 제공 (기존 index.html 등을 위함)
-app.use(express.static(path.join(__dirname)));
+// React 앱의 정적 파일 제공
+// App Hosting 환경에서는 빌드 후 smartglot-react/dist 경로에 파일이 위치하게 됩니다.
+const reactAppDistPath = path.join(__dirname, 'smartglot-react', 'dist');
+app.use(express.static(reactAppDistPath));
 
 // 간단한 API 라우트 예시 (필요에 따라 추가/수정)
 app.get('/api/hello', (req, res) => {
@@ -220,10 +222,10 @@ app.post('/api/analyze-terms', async (req, res) => {
   }
 });
 
-// 모든 다른 GET 요청은 index.html을 서빙 (Single Page Application을 위한 설정)
+// 모든 다른 GET 요청은 React 앱의 index.html을 서빙
 // 이 라우트는 다른 모든 API 라우트 *뒤에* 위치해야 합니다.
 app.get('*', (req, res) => {
-  res.sendFile(path.join(__dirname, 'index.html'));
+  res.sendFile(path.join(reactAppDistPath, 'index.html'));
 });
 
 app.listen(port, () => {
