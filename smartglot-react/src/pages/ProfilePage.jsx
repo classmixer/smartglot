@@ -10,7 +10,6 @@ function ProfilePage() {
     currentUser,
     changeUserPassword,
     deleteUserAccount,
-    logout,
     error: authError,
     setError: setAuthError,
     loading: authLoading,
@@ -71,7 +70,7 @@ function ProfilePage() {
       setNewPasswordConfirm('');
     } catch (err) {
       // 에러는 useEffect[authError]를 통해 formError에 설정됨
-      // console.error("Password change failed on page:", err)
+      console.error('Password change failed on page:', err);
     }
   };
 
@@ -91,7 +90,7 @@ function ProfilePage() {
         // App.jsx의 PrivateRoute가 /auth 또는 홈으로 리디렉션
         // navigate('/'); // AuthContext에서 처리하므로 여기서 직접 이동 불필요
       } catch (err) {
-        // console.error("Account deletion failed on page:", err)
+       console.error("Account deletion failed on page:", err)
       }
     }
   };
