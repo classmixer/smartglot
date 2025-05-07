@@ -155,6 +155,22 @@
         border: 1px solid red;
       }
 
+      /* Email verification notice style */
+      #email-verification-notice {
+        padding: 10px;
+        background-color: #fff3cd;
+        border: 1px solid #ffeeba;
+        color: #856404;
+        border-radius: 4px;
+        margin-bottom: 15px;
+        text-align: center;
+        display: none; /* Initially hidden */
+      }
+      #email-verification-notice a {
+        color: #0056b3;
+        text-decoration: underline;
+      }
+
       /* Initial display states */
       #auth-container,
       #analysis-container,
@@ -256,6 +272,7 @@
       <div id="auth-container">
         <h2>Authentication</h2>
         <div id="error-message"></div>
+        <div id="email-verification-notice" style="display: none"></div>
 
         <!-- Login Form -->
         <div id="login-section" class="auth-section">
@@ -272,6 +289,16 @@
             </button>
           </div>
           <button id="loginButton">Login</button>
+          <button
+            id="googleLoginButton"
+            style="margin-top: 10px; background-color: #db4437; color: white"
+          >
+            <img
+              src="https://www.gstatic.com/firebasejs/ui/2.0.0/images/auth/google.svg"
+              alt="Google icon"
+              style="height: 1em; vertical-align: middle; margin-right: 8px"
+            />Sign in with Google
+          </button>
           <p>
             Don't have an account? <a href="#" id="showSignupLink">Sign Up</a>
           </p>
@@ -464,8 +491,12 @@
         'signupPasswordConfirm',
       );
       const signupButton = document.getElementById('signupButton'); // Inside auth container
+      const googleLoginButton = document.getElementById('googleLoginButton'); // Google Login Button
 
       const errorMessageDiv = document.getElementById('error-message');
+      const emailVerificationNoticeDiv = document.getElementById(
+        'email-verification-notice',
+      ); // Email verification notice
 
       const resultsDiv = document.getElementById('results');
 
@@ -509,6 +540,7 @@
         profileIconButton.textContent = ''; // Clear profile icon text
         clearAuthError();
         clearAuthForms();
+        emailVerificationNoticeDiv.style.display = 'none'; // Hide verification notice
       }
 
       function showAuthScreen(showLogin = true) {
@@ -529,6 +561,7 @@
           signupSection.style.display = 'block';
         }
         clearAuthError();
+        // emailVerificationNoticeDiv.style.display = 'none'; // Verification notice visibility managed by signup/authStateChange
       }
 
       function showAnalysisScreen(user) {
@@ -539,6 +572,7 @@
         headerLoginButton.style.display = 'none';
         headerSignupButton.style.display = 'none';
         headerLogoutButton.style.display = 'inline-block';
+        emailVerificationNoticeDiv.style.display = 'none'; // Hide verification notice
 
         // Set profile icon
         const emailPrefix = user.email.substring(0, 2).toUpperCase();
@@ -650,18 +684,77 @@
           await auth.createUserWithEmailAndPassword(email, password);
           console.log('User signed up successfully!');
           // UI will update via onAuthStateChanged, which calls showAnalysisScreen
+          // Send email verification
+          const user = auth.currentUser;
+          if (user) {
+            await user.sendEmailVerification();
+            console.log('Verification email sent.');
+            // Clear forms and show message to check email
+            clearAuthForms();
+            emailVerificationNoticeDiv.innerHTML =
+              '회원가입이 거의 완료되었습니다! <strong>이메일을 확인하여 계정을 인증해주세요.</strong> 인증 후 로그인할 수 있습니다. <a href="#" id="resendVerificationEmailLink">인증 이메일 재전송</a>';
+            emailVerificationNoticeDiv.style.display = 'block';
+            showAuthScreen(true); // Show login form after signup attempt
+
+            const resendLink = document.getElementById(
+              'resendVerificationEmailLink',
+            );
+            if (resendLink) {
+              resendLink.addEventListener('click', async (e) => {
+                e.preventDefault();
+                try {
+                  await user.sendEmailVerification();
+                  emailVerificationNoticeDiv.innerHTML =
+                    '인증 이메일이 다시 전송되었습니다. 이메일함을 확인해주세요. <a href="#" id="resendVerificationEmailLink">인증 이메일 재전송</a>';
+                  // Re-attach event listener to new link if needed or handle differently
+                } catch (error) {
+                  console.error('Error resending verification email:', error);
+                  showAuthError(
+                    '인증 이메일 재전송에 실패했습니다: ' + error.message,
+                  );
+                }
+              });
+            }
+          }
         } catch (error) {
           console.error('Sign up failed:', error);
-          if (
-            error.code === 'auth/invalid-email' ||
-            error.code === 'auth/email-already-in-use'
-          ) {
+          if (error.code === 'auth/email-already-in-use') {
+            // Check if the email is linked to Google Sign-In
+            try {
+              const signInMethods =
+                await auth.fetchSignInMethodsForEmail(email);
+              if (
+                signInMethods.includes(
+                  firebase.auth.GoogleAuthProvider.PROVIDER_ID,
+                )
+              ) {
+                showAuthError(
+                  '이미 Google 계정으로 가입된 이메일입니다. Google 로그인을 이용해주세요.',
+                );
+                signupEmailInput.classList.add('input-error');
+              } else {
+                showAuthError(
+                  '이메일이 이미 사용 중입니다. 다른 이메일을 사용하거나 로그인해주세요.',
+                );
+                signupEmailInput.classList.add('input-error');
+              }
+            } catch (fetchError) {
+              // Fallback error message if fetchSignInMethodsForEmail fails
+              showAuthError(
+                '가입에 실패했습니다: 이메일이 이미 사용 중일 수 있습니다.',
+              );
+              signupEmailInput.classList.add('input-error');
+            }
+          } else if (error.code === 'auth/invalid-email') {
             signupEmailInput.classList.add('input-error');
+            showAuthError('유효하지 않은 이메일 주소입니다.');
           } else if (error.code === 'auth/weak-password') {
             signupPasswordInput.classList.add('input-error');
             signupPasswordConfirmInput.classList.add('input-error');
+            showAuthError('비밀번호는 6자 이상이어야 합니다.');
+          } else {
+            showAuthError(`가입 실패: ${error.message}`);
           }
-          showAuthError(`Sign up failed: ${error.message}`);
         }
       });
 
@@ -682,6 +775,7 @@
           await auth.signInWithEmailAndPassword(email, password);
           console.log('User logged in successfully!');
           // UI will update via onAuthStateChanged, which calls showAnalysisScreen
+          // It will check for emailVerified status there
         } catch (error) {
           console.error('Login failed:', error);
           if (
@@ -698,6 +792,30 @@
             loginPasswordInput.classList.add('input-error');
           }
           showAuthError(`Login failed: ${error.message}`);
+        }
+      });
+
+      // Google Login Button
+      googleLoginButton.addEventListener('click', async () => {
+        clearAuthError();
+        const provider = new firebase.auth.GoogleAuthProvider();
+        try {
+          await auth.signInWithPopup(provider);
+          console.log('User logged in with Google successfully!');
+          // UI will update via onAuthStateChanged
+        } catch (error) {
+          console.error('Google login failed:', error);
+          let message = `Google 로그인 실패: ${error.message}`;
+          if (error.code === 'auth/popup-closed-by-user') {
+            message =
+              'Google 로그인 팝업이 사용자에 의해 닫혔습니다. 다시 시도해주세요.';
+          } else if (
+            error.code === 'auth/account-exists-with-different-credential'
+          ) {
+            message =
+              '이미 다른 로그인 방식으로 가입된 이메일입니다. 기존 방식으로 로그인해주세요.';
+          }
+          showAuthError(message);
         }
       });
 
@@ -752,10 +870,60 @@
       auth.onAuthStateChanged((user) => {
         if (user) {
           // User is signed in
-          // Check if the profile screen is currently displayed. If so, keep it.
-          // Otherwise, show the analysis screen.
-          if (profileContainer.style.display !== 'block') {
-            showAnalysisScreen(user);
+          if (
+            !user.emailVerified &&
+            user.providerData.some(
+              (provider) => provider.providerId === 'password',
+            )
+          ) {
+            // If signed in with email/password but email is not verified
+            console.log('User signed in but email not verified.');
+            welcomeContainer.style.display = 'none';
+            analysisContainer.style.display = 'none';
+            profileContainer.style.display = 'none';
+            authContainer.style.display = 'block'; // Show auth container for message
+            loginSection.style.display = 'block'; // Show login section part of auth
+            signupSection.style.display = 'none';
+
+            emailVerificationNoticeDiv.innerHTML = `<strong>계정 인증이 필요합니다.</strong> ${user.email} 주소로 발송된 인증 메일을 확인해주세요. 인증 후 다시 로그인해주세요. <a href="#" id="resendVerificationEmailInAuthLink">인증 이메일 재전송</a>`;
+            emailVerificationNoticeDiv.style.display = 'block';
+
+            const resendLinkInAuth = document.getElementById(
+              'resendVerificationEmailInAuthLink',
+            );
+            if (resendLinkInAuth) {
+              resendLinkInAuth.addEventListener('click', async (e) => {
+                e.preventDefault();
+                try {
+                  await user.sendEmailVerification();
+                  emailVerificationNoticeDiv.innerHTML =
+                    '인증 이메일이 다시 전송되었습니다. 이메일함을 확인해주세요. <a href="#" id="resendVerificationEmailInAuthLink">인증 이메일 재전송</a>';
+                } catch (error) {
+                  console.error('Error resending verification email:', error);
+                  showAuthError(
+                    '인증 이메일 재전송에 실패했습니다: ' + error.message,
+                  );
+                }
+              });
+            }
+
+            // Show limited header: only logout and profile icon (if logic allows for unverified users)
+            headerLoginButton.style.display = 'none';
+            headerSignupButton.style.display = 'none';
+            headerLogoutButton.style.display = 'inline-block'; // Allow logout
+
+            const emailPrefix = user.email.substring(0, 2).toUpperCase();
+            profileIconButton.textContent = emailPrefix;
+            profileIconButton.style.display = 'inline-block'; // Show profile icon, clicking it might show profile screen or more options
+          } else {
+            // User is signed in AND (email is verified OR not an email/password user e.g. Google login)
+            // Check if the profile screen is currently displayed. If so, keep it.
+            // Otherwise, show the analysis screen.
+            if (profileContainer.style.display !== 'block') {
+              showAnalysisScreen(user);
+            }
+            // Ensure email verification notice is hidden if user is verified or used social login
+            emailVerificationNoticeDiv.style.display = 'none';
           }
         } else {
           // User is signed out
@@ -791,6 +959,7 @@
         authContainer.style.display = 'none';
         analysisContainer.style.display = 'none';
         profileContainer.style.display = 'block';
+        emailVerificationNoticeDiv.style.display = 'none'; // Hide verification notice
 
         // Keep header buttons consistent with analysis screen
         headerLoginButton.style.display = 'none';
@@ -827,6 +996,17 @@
       changePasswordButton.addEventListener('click', async () => {
         const user = auth.currentUser;
         if (!user) return;
+        if (
+          !user.emailVerified &&
+          user.providerData.some(
+            (provider) => provider.providerId === 'password',
+          )
+        ) {
+          profileErrorMessageDiv.textContent =
+            '비밀번호를 변경하려면 먼저 이메일 인증을 완료해주세요.';
+          profileErrorMessageDiv.style.color = 'red';
+          return;
+        }
 
         const currentPassword = currentPasswordInput.value;
         const newPassword = newPasswordInput.value;
@@ -905,6 +1085,17 @@
       deleteAccountButton.addEventListener('click', async () => {
         const user = auth.currentUser;
         if (!user) return; // Should not happen if button is visible
+        if (
+          !user.emailVerified &&
+          user.providerData.some(
+            (provider) => provider.providerId === 'password',
+          )
+        ) {
+          profileErrorMessageDiv.textContent =
+            '계정을 삭제하려면 먼저 이메일 인증을 완료해주세요.';
+          profileErrorMessageDiv.style.color = 'red';
+          return;
+        }
 
         profileErrorMessageDiv.textContent = ''; // Clear previous errors
 
