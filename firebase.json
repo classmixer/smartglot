@@ -2,7 +2,7 @@
   "apphosting": {
     "backend": "smartglot",
     "region": "us-central1",
-    "public": "."
+    "public": "dist"
   },
   "functions": {
     "source": "functions"

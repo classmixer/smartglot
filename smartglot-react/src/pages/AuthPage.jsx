@@ -217,7 +217,11 @@ function AuthPage() {
           />
         )}
 
-        <button type="submit" disabled={authLoading}>
+        <button
+          type="submit"
+          disabled={authLoading}
+          style={{ backgroundColor: '#004aad' }}
+        >
           {isLoginMode ? 'Login' : 'Sign Up'}
         </button>
 
