@@ -1,0 +1,223 @@
+/* Basic styling */
+body {
+  /* font-family: sans-serif; */ /* Removed, use :root from index.css */
+  /* padding: 0; */ /* Removed */
+  margin: 0; /* Keep */
+  display: flex; /* Keep */
+  flex-direction: column; /* Keep */
+  min-height: 100vh; /* Keep */
+  min-width: 320px; /* Added from index.css body suggestions */
+}
+.container {
+  padding: 20px;
+  flex-grow: 1;
+}
+header {
+  background-color: #f1f1f1;
+  padding: 10px 20px;
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  border-bottom: 1px solid #ccc;
+}
+header h1 {
+  margin: 0;
+  font-size: 1.5em;
+}
+header nav button {
+  margin-left: 10px;
+  padding: 8px 12px;
+}
+#welcome-container {
+  text-align: center;
+  padding: 40px 20px;
+}
+#welcome-container h2 {
+  margin-bottom: 20px;
+}
+#welcome-container p {
+  max-width: 600px;
+  margin: 0 auto 20px auto;
+  line-height: 1.6;
+}
+#welcome-container button {
+  margin-top: 10px;
+  padding: 12px 20px;
+  font-size: 1.1em;
+}
+textarea {
+  width: 80%;
+  min-height: 150px;
+  margin-bottom: 10px;
+  display: block;
+}
+/* 
+button { 
+  padding: 10px 15px;
+  cursor: pointer;
+} 
+*/
+input[type='email'],
+input[type='password'] {
+  padding: 8px;
+  margin-right: 5px;
+  margin-bottom: 10px; /* Add space below inputs */
+  display: block; /* Make inputs block level */
+  width: calc(100% - 18px); /* Adjust width */
+  max-width: 300px; /* Max width for inputs */
+}
+#results {
+  margin-top: 20px;
+  border: 1px solid #ccc;
+  padding: 10px;
+  min-height: 50px;
+  background-color: #f9f9f9;
+}
+.result-item {
+  border-bottom: 1px dotted #eee;
+  padding: 5px 0;
+}
+.result-item .term {
+  font-weight: bold;
+}
+.result-item .freq {
+  margin-left: 10px;
+  color: #555;
+}
+#auth-container,
+#analysis-container {
+  margin: 30px auto; /* Center containers */
+  padding: 20px;
+  border: 1px solid #eee;
+  border-radius: 5px;
+  max-width: 500px; /* Limit width */
+  /* display: none; */ /* Removed - React will control visibility */
+}
+#auth-container h2,
+#analysis-container h2 {
+  text-align: center;
+  margin-bottom: 20px;
+}
+#user-status {
+  /* Renamed from user-info */
+  text-align: right;
+  font-size: 0.9em;
+  color: #555;
+}
+.auth-section {
+  margin-bottom: 15px;
+  padding-top: 10px;
+  border-top: 1px solid #eee;
+}
+.auth-section:first-of-type {
+  border-top: none;
+  padding-top: 0;
+}
+.auth-section h3 {
+  margin-top: 0;
+  margin-bottom: 15px;
+}
+#error-message {
+  color: red;
+  margin-top: 10px;
+  margin-bottom: 15px; /* Add margin below error */
+  font-size: 0.9em;
+  min-height: 1.2em; /* Reserve space for error */
+  text-align: center;
+}
+.input-error {
+  border: 1px solid red;
+}
+
+/* Email verification notice style */
+#email-verification-notice {
+  padding: 10px;
+  background-color: #fff3cd;
+  border: 1px solid #ffeeba;
+  color: #856404;
+  border-radius: 4px;
+  margin-bottom: 15px;
+  text-align: center;
+  /* display: none; */ /* Removed - React will control visibility */
+}
+#email-verification-notice a {
+  color: #0056b3;
+  text-decoration: underline;
+}
+
+/* Initial display states - React will manage visibility, so these can be simplified or removed if components handle their own initial display */
+/*
+#auth-container,
+#analysis-container,
+#headerLogoutButton {
+  display: none;
+}
+#welcome-container,
+#headerLoginButton,
+#headerSignupButton {
+  display: block;
+}
+*/
+header nav {
+  /* Container for header buttons */
+  display: flex;
+  align-items: center;
+}
+
+/* Profile Icon Style */
+.profile-icon {
+  display: inline-block;
+  width: 36px;
+  height: 36px;
+  border-radius: 50%; /* 원형 모양 */
+  background-color: #007bff; /* 배경색 */
+  color: white; /* 글자색 */
+  text-align: center;
+  line-height: 36px; /* 글자 세로 중앙 정렬 */
+  font-size: 1em;
+  font-weight: bold;
+  cursor: pointer;
+  border: none;
+  margin-right: 15px; /* 로그아웃 버튼과의 간격 */
+}
+
+/* Password visibility toggle styles */
+.password-wrapper {
+  position: relative;
+  width: calc(100% - 18px); /* Match input width style */
+  max-width: 300px; /* Match input max-width */
+  margin-bottom: 10px; /* Match input margin-bottom */
+  margin-left: 0;
+  margin-right: 0;
+}
+.password-wrapper input[type='password'],
+.password-wrapper input[type='text'] {
+  width: 100%;
+  padding-right: 40px; /* Make space for the icon */
+  box-sizing: border-box;
+  padding: 8px;
+  margin: 0;
+  display: block;
+}
+.toggle-password {
+  position: absolute;
+  right: 5px;
+  top: 50%;
+  transform: translateY(-50%);
+  background: none;
+  border: none;
+  cursor: pointer;
+  padding: 5px;
+  line-height: 1;
+  color: #555;
+  width: 24px;
+  height: 24px;
+}
+.toggle-password img {
+  width: 100%;
+  height: 100%;
+  display: block;
+}
+.toggle-password:focus {
+  outline: none;
+}
