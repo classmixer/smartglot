@@ -527,6 +527,11 @@
         'profile-error-message',
       );
 
+      // --- Global variables for email verification polling ---
+      let emailVerificationInterval = null;
+      const POLLING_TIMEOUT_MS = 5 * 60 * 1000; // 5 minutes
+      let pollingStartTime = null;
+
       // --- UI Control Functions ---
       function showWelcomeScreen() {
         welcomeContainer.style.display = 'block';
@@ -540,7 +545,8 @@
         profileIconButton.textContent = ''; // Clear profile icon text
         clearAuthError();
         clearAuthForms();
-        emailVerificationNoticeDiv.style.display = 'none'; // Hide verification notice
+        if (emailVerificationNoticeDiv)
+          emailVerificationNoticeDiv.style.display = 'none'; // Hide verification notice
       }
 
       function showAuthScreen(showLogin = true) {
@@ -572,7 +578,8 @@
         headerLoginButton.style.display = 'none';
         headerSignupButton.style.display = 'none';
         headerLogoutButton.style.display = 'inline-block';
-        emailVerificationNoticeDiv.style.display = 'none'; // Hide verification notice
+        if (emailVerificationNoticeDiv)
+          emailVerificationNoticeDiv.style.display = 'none'; // Hide verification notice
 
         // Set profile icon
         const emailPrefix = user.email.substring(0, 2).toUpperCase();
@@ -868,6 +875,16 @@
 
       // Listen for Auth State Changes
       auth.onAuthStateChanged((user) => {
+        // Clear any existing polling interval when auth state changes significantly
+        if (emailVerificationInterval) {
+          clearInterval(emailVerificationInterval);
+          emailVerificationInterval = null;
+          pollingStartTime = null;
+          console.log(
+            'Cleared existing email verification interval due to auth state change.',
+          );
+        }
+
         if (user) {
           // User is signed in
           if (
@@ -877,7 +894,9 @@
             )
           ) {
             // If signed in with email/password but email is not verified
-            console.log('User signed in but email not verified.');
+            console.log(
+              'User signed in but email not verified. Setting up verification check...',
+            );
             welcomeContainer.style.display = 'none';
             analysisContainer.style.display = 'none';
             profileContainer.style.display = 'none';
@@ -885,7 +904,7 @@
             loginSection.style.display = 'block'; // Show login section part of auth
             signupSection.style.display = 'none';
 
-            emailVerificationNoticeDiv.innerHTML = `<strong>계정 인증이 필요합니다.</strong> ${user.email} 주소로 발송된 인증 메일을 확인해주세요. 인증 후 다시 로그인해주세요. <a href="#" id="resendVerificationEmailInAuthLink">인증 이메일 재전송</a>`;
+            emailVerificationNoticeDiv.innerHTML = `<strong>계정 인증이 필요합니다.</strong> ${user.email} 주소로 발송된 인증 메일을 확인해주세요. 인증이 확인되면 자동으로 로그인됩니다. <a href="#" id="resendVerificationEmailInAuthLink">인증 이메일 재전송</a>`;
             emailVerificationNoticeDiv.style.display = 'block';
 
             const resendLinkInAuth = document.getElementById(
@@ -894,17 +913,117 @@
             if (resendLinkInAuth) {
               resendLinkInAuth.addEventListener('click', async (e) => {
                 e.preventDefault();
-                try {
-                  await user.sendEmailVerification();
-                  emailVerificationNoticeDiv.innerHTML =
-                    '인증 이메일이 다시 전송되었습니다. 이메일함을 확인해주세요. <a href="#" id="resendVerificationEmailInAuthLink">인증 이메일 재전송</a>';
-                } catch (error) {
-                  console.error('Error resending verification email:', error);
+                if (auth.currentUser) {
+                  // Ensure user is still current
+                  try {
+                    await auth.currentUser.sendEmailVerification();
+                    // Update message slightly, polling will continue or restart if needed by onAuthStateChanged logic
+                    emailVerificationNoticeDiv.innerHTML =
+                      '인증 이메일이 다시 전송되었습니다. 이메일함을 확인해주세요. 잠시 후 자동으로 로그인됩니다. <a href="#" id="resendVerificationEmailInAuthLink">인증 이메일 재전송</a>';
+                  } catch (error_resend) {
+                    console.error(
+                      'Error resending verification email:',
+                      error_resend,
+                    );
+                    showAuthError(
+                      '인증 이메일 재전송에 실패했습니다: ' +
+                        error_resend.message,
+                    );
+                  }
+                } else {
                   showAuthError(
-                    '인증 이메일 재전송에 실패했습니다: ' + error.message,
+                    '사용자 정보를 찾을 수 없어 이메일을 재전송할 수 없습니다. 다시 로그인해주세요.',
                   );
                 }
               });
+            }
+
+            // Start polling if not already active for this unverified session
+            if (!emailVerificationInterval) {
+              console.log('Starting email verification polling.');
+              pollingStartTime = Date.now();
+              emailVerificationInterval = setInterval(async () => {
+                if (Date.now() - pollingStartTime > POLLING_TIMEOUT_MS) {
+                  console.log('Email verification polling timed out.');
+                  clearInterval(emailVerificationInterval);
+                  emailVerificationInterval = null;
+                  pollingStartTime = null;
+                  emailVerificationNoticeDiv.innerHTML = `이메일 인증 시간이 초과되었습니다. <strong><a href="#" onclick="window.location.reload()">페이지를 새로고침</a></strong>하거나 다시 로그인해주세요. <a href="#" id="resendVerificationEmailTimeoutLink">인증 이메일 재전송</a>`;
+                  const resendLinkTimeout = document.getElementById(
+                    'resendVerificationEmailTimeoutLink',
+                  );
+                  if (resendLinkTimeout) {
+                    resendLinkTimeout.addEventListener(
+                      'click',
+                      async (e_timeout) => {
+                        e_timeout.preventDefault();
+                        if (auth.currentUser) {
+                          try {
+                            await auth.currentUser.sendEmailVerification();
+                            emailVerificationNoticeDiv.innerHTML =
+                              '인증 이메일이 다시 전송되었습니다. 이메일함을 확인해주세요. 인증이 확인되면 자동으로 로그인됩니다. <a href="#" id="resendVerificationEmailTimeoutLink">인증 이메일 재전송</a>';
+                            // Optionally, restart polling here if desired, or prompt refresh/re-login
+                            // For simplicity, we are not restarting polling automatically on timeout resend.
+                          } catch (error_resend_timeout) {
+                            showAuthError(
+                              '인증 이메일 재전송에 실패했습니다: ' +
+                                error_resend_timeout.message,
+                            );
+                          }
+                        } else {
+                          showAuthError(
+                            '사용자 정보를 찾을 수 없어 이메일을 재전송할 수 없습니다. 다시 로그인해주세요.',
+                          );
+                        }
+                      },
+                    );
+                  }
+                  return; // Stop this interval execution
+                }
+
+                const currentUserForPolling = auth.currentUser; // Use the most current user from auth service
+                if (
+                  currentUserForPolling &&
+                  currentUserForPolling.uid === user.uid
+                ) {
+                  // Ensure we are polling for the same user
+                  try {
+                    await currentUserForPolling.reload(); // Reload user data from server
+                    if (currentUserForPolling.emailVerified) {
+                      console.log('Email verified! Proceeding to login.');
+                      clearInterval(emailVerificationInterval);
+                      emailVerificationInterval = null;
+                      pollingStartTime = null;
+                      showAnalysisScreen(currentUserForPolling); // Use the reloaded user object
+                    } else {
+                      console.log(
+                        'Email not yet verified. Continuing polling...',
+                      );
+                    }
+                  } catch (reloadError) {
+                    console.error(
+                      'Error reloading user during polling:',
+                      reloadError,
+                    );
+                    // Consider stopping polling if reloadError indicates a persistent issue (e.g. user disabled/deleted)
+                    // For now, we let it continue until timeout or successful verification.
+                  }
+                } else if (!currentUserForPolling) {
+                  console.log(
+                    'User became null during polling. Stopping interval.',
+                  );
+                  clearInterval(emailVerificationInterval);
+                  emailVerificationInterval = null;
+                  pollingStartTime = null;
+                  // onAuthStateChanged will handle the signed-out state.
+                } else {
+                  // User changed during polling, current interval is for a different user.
+                  // This case should ideally be handled by the top-level interval clear in onAuthStateChanged.
+                  console.log(
+                    'Polling for a user that is no longer the active user. Interval will be cleared.',
+                  );
+                }
+              }, 5000); // Poll every 5 seconds
             }
 
             // Show limited header: only logout and profile icon (if logic allows for unverified users)
@@ -917,16 +1036,34 @@
             profileIconButton.style.display = 'inline-block'; // Show profile icon, clicking it might show profile screen or more options
           } else {
             // User is signed in AND (email is verified OR not an email/password user e.g. Google login)
-            // Check if the profile screen is currently displayed. If so, keep it.
-            // Otherwise, show the analysis screen.
+            // Interval should have been cleared at the start of onAuthStateChanged or if it was for a previous state
+            if (emailVerificationInterval) {
+              console.warn(
+                'Interval was unexpectedly active for a verified/social login user. Clearing.',
+              );
+              clearInterval(emailVerificationInterval);
+              emailVerificationInterval = null;
+              pollingStartTime = null;
+            }
+
             if (profileContainer.style.display !== 'block') {
               showAnalysisScreen(user);
             }
             // Ensure email verification notice is hidden if user is verified or used social login
-            emailVerificationNoticeDiv.style.display = 'none';
+            if (emailVerificationNoticeDiv)
+              emailVerificationNoticeDiv.style.display = 'none';
           }
         } else {
           // User is signed out
+          // Interval should have been cleared at the start of onAuthStateChanged
+          if (emailVerificationInterval) {
+            console.warn(
+              'Interval was unexpectedly active for a signed-out user. Clearing.',
+            );
+            clearInterval(emailVerificationInterval);
+            emailVerificationInterval = null;
+            pollingStartTime = null;
+          }
           showWelcomeScreen();
         }
       });
@@ -959,7 +1096,8 @@
         authContainer.style.display = 'none';
         analysisContainer.style.display = 'none';
         profileContainer.style.display = 'block';
-        emailVerificationNoticeDiv.style.display = 'none'; // Hide verification notice
+        if (emailVerificationNoticeDiv)
+          emailVerificationNoticeDiv.style.display = 'none'; // Hide verification notice
 
         // Keep header buttons consistent with analysis screen
         headerLoginButton.style.display = 'none';
