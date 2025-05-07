@@ -26,9 +26,18 @@ function Header() {
       <h1>
         <Link
           to={currentUser ? '/analysis' : '/'}
-          style={{ textDecoration: 'none', color: 'inherit' }}
+          style={{
+            textDecoration: 'none',
+            color: 'inherit',
+            display: 'flex',
+            alignItems: 'center',
+          }}
         >
-          Smartglot
+          <img
+            src="/smartglot.svg"
+            alt="Smartglot Logo"
+            style={{ height: '40px' }}
+          />
         </Link>
       </h1>
       <nav>
@@ -48,10 +57,20 @@ function Header() {
         ) : (
           <>
             <Link to="/auth?mode=login">
-              <button id="headerLoginButton">Login</button>
+              <button
+                id="headerLoginButton"
+                style={{ backgroundColor: '#004aad' }}
+              >
+                Login
+              </button>
             </Link>
             <Link to="/auth?mode=signup">
-              <button id="headerSignupButton">Sign Up</button>
+              <button
+                id="headerSignupButton"
+                style={{ backgroundColor: '#004aad' }}
+              >
+                Sign Up
+              </button>
             </Link>
           </>
         )}
