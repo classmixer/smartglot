@@ -235,9 +235,16 @@
         border: none;
         cursor: pointer;
         padding: 5px;
-        font-size: 1.2em; /* Adjust icon size */
+        /* font-size: 1.2em; */ /* 아이콘 크기 조정을 위해 제거 또는 수정 */
         line-height: 1; /* Prevent extra spacing */
         color: #555; /* Icon color */
+        width: 24px; /* SVG 아이콘 크기에 맞게 너비 조정 */
+        height: 24px; /* SVG 아이콘 크기에 맞게 높이 조정 */
+      }
+      .toggle-password img {
+        width: 100%;
+        height: 100%;
+        display: block;
       }
       .toggle-password:focus {
         outline: none;
@@ -285,7 +292,7 @@
               class="toggle-password"
               aria-label="Show password"
             >
-              🔒
+              <img src="eye-password-hide.svg" alt="Show password" />
             </button>
           </div>
           <button id="loginButton">Login</button>
@@ -315,7 +322,7 @@
               class="toggle-password"
               aria-label="Show password"
             >
-              🔒
+              <img src="eye-password-hide.svg" alt="Show password" />
             </button>
           </div>
           <div class="password-wrapper">
@@ -329,7 +336,7 @@
               class="toggle-password"
               aria-label="Show password"
             >
-              🔒
+              <img src="eye-password-hide.svg" alt="Show password" />
             </button>
           </div>
           <button id="signupButton">Sign Up</button>
@@ -399,7 +406,7 @@
             class="toggle-password"
             aria-label="Show password"
           >
-            🔒
+            <img src="eye-password-hide.svg" alt="Show password" />
           </button>
         </div>
         <div class="password-wrapper">
@@ -409,7 +416,7 @@
             class="toggle-password"
             aria-label="Show password"
           >
-            🔒
+            <img src="eye-password-hide.svg" alt="Show password" />
           </button>
         </div>
         <div class="password-wrapper">
@@ -423,7 +430,7 @@
             class="toggle-password"
             aria-label="Show password"
           >
-            🔒
+            <img src="eye-password-hide.svg" alt="Show password" />
           </button>
         </div>
         <button id="changePasswordButton">Change Password</button>
@@ -622,7 +629,14 @@
           passwordInput.setAttribute('type', type);
 
           // Change the icon based on the type
-          button.textContent = type === 'password' ? '🔒' : '👁️';
+          const img = button.querySelector('img');
+          if (img) {
+            img.src =
+              type === 'password'
+                ? 'eye-password-hide.svg'
+                : 'eye-password-show.svg';
+            img.alt = type === 'password' ? 'Show password' : 'Hide password';
+          }
           // Optionally change aria-label for accessibility
           button.setAttribute(
             'aria-label',
