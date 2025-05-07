@@ -20,6 +20,5 @@ env:
 # build: npm run build # 만약 빌드 스크립트가 있다면
 
 # App Hosting이 정적 파일을 제공하도록 설정할 수 있습니다.
-# public: . # firebase.json의 apphosting.public 설정과 일치시킵니다.
-
+public: smartglot-react/dist
 # 기타 필요한 설정 (리소스, 스케일링 등)은 Firebase 문서를 참고하여 추가할 수 있습니다.
