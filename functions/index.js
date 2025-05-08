@@ -202,7 +202,7 @@ exports.analyzePdf = functions.https.onCall(async (data, context) => {
 
     const response = await axios.post(
       analysisEndpoint,
-      { korean_content: extractedText },
+      { text: extractedText },
       {
         // Restore the config object with headers
         headers: {
