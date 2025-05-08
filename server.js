@@ -135,6 +135,13 @@ app.get('/api/search', async (req, res) => {
 
 // === Elasticsearch Term Analysis API ===
 app.post('/api/analyze-terms', async (req, res) => {
+  // 요청 본문 전체를 로깅합니다.
+  console.log(
+    'Received request for /api/analyze-terms. Request body:',
+    JSON.stringify(req.body),
+  );
+  console.log('Request headers:', JSON.stringify(req.headers)); // 헤더도 로깅하여 Content-Type 등을 확인합니다.
+
   const inputText = req.body.text;
 
   if (!esClient) {
