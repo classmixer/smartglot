@@ -133,14 +133,7 @@ exports.analyzePdf = functions.https.onCall(async (data, context) => {
       // Filter out single-character words for Korean text
       if (extractedText && extractedText.length > 0) {
         const words = extractedText.split(/\s+/); // Split by whitespace
-        const filteredWords = words.filter((word) => {
-          // 이 안의 로직을 검토하거나 잠시 비활성화
-          // 예시:
-          // if (word.length < 3) { // 사용자가 직접 수정한 부분일 수 있음
-          //   return false;
-          // }
-          return true; // 임시로 모든 단어 통과
-        });
+        const filteredWords = words.filter(() => true); // <--- 'word'가 여기서 선언됨
         extractedText = filteredWords.join(' ');
         console.log(
           `[${uid}] Text after CUSTM filtering: ${extractedText.length} characters.`,
@@ -203,6 +196,10 @@ exports.analyzePdf = functions.https.onCall(async (data, context) => {
     console.log(
       `[${uid}] Sending extracted text to analysis endpoint: ${analysisEndpoint}`,
     );
+    // Log the text being sent and the token
+    console.log(`[${uid}] Text to send to analysis endpoint:`, extractedText);
+    console.log(`[${uid}] Authorization Token for analysis endpoint:`, token);
+
     const response = await axios.post(
       analysisEndpoint,
       { korean_content: extractedText },
