@@ -79,6 +79,7 @@ input[type='password'] {
 }
 .result-item .term {
   font-weight: bold;
+  color: #000;
 }
 .result-item .freq {
   margin-left: 10px;
