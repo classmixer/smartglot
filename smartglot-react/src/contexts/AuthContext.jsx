@@ -15,6 +15,7 @@ export function AuthProvider({ children }) {
 
   // Firebase에서 제공하는 Google Auth Provider
   const googleProvider = new firebase.auth.GoogleAuthProvider();
+  googleProvider.setCustomParameters({ prompt: 'select_account' });
 
   async function signup(email, password) {
     setError(null);

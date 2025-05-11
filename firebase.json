@@ -4,6 +4,20 @@
     "region": "us-central1",
     "public": "smartglot-react/dist"
   },
+  "hosting": {
+    "public": "smartglot-react/dist",
+    "headers": [
+      {
+        "source": "**",
+        "headers": [
+          {
+            "key": "Cross-Origin-Opener-Policy",
+            "value": "same-origin-allow-popups"
+          }
+        ]
+      }
+    ]
+  },
   "functions": {
     "source": "functions"
   }
