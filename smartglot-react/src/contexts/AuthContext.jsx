@@ -43,12 +43,22 @@ export function AuthProvider({ children }) {
         email,
         password,
       );
-      // onAuthStateChanged가 currentUser를 업데이트하고 emailVerified를 확인할 것임
       return userCredential.user;
     } catch (e) {
-      console.error('Login failed:', e);
-      setError(e.message);
-      throw e;
+      console.error('Login failed in AuthContext:', e);
+      if (e.code === 'auth/invalid-credential') {
+        // fetchSignInMethodsForEmail을 여기서 호출하지 않고,
+        // 일반적인 로그인 실패 메시지와 함께 Google 로그인 가능성을 안내합니다.
+        const specificMessage =
+          '이메일 또는 비밀번호가 잘못되었습니다. Google 계정으로 가입하셨다면 Google 로그인을 이용해 보세요.';
+        setError(specificMessage);
+        throw new Error(specificMessage); // AuthPage로 에러를 전달
+      } else {
+        // auth/invalid-credential 이외의 다른 Firebase 에러 코드들
+        // (예: auth/user-not-found, auth/wrong-password, auth/too-many-requests 등)
+        setError(e.message); // Firebase에서 제공하는 기본 에러 메시지 사용
+        throw e;
+      }
     }
   }
 
