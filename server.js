@@ -142,7 +142,7 @@ app.post('/api/analyze-terms', async (req, res) => {
   );
   console.log('Request headers:', JSON.stringify(req.headers)); // 헤더도 로깅하여 Content-Type 등을 확인합니다.
 
-  const inputText = req.body.text;
+  const inputText = req.body.korean_content;
 
   if (!esClient) {
     return res
@@ -155,9 +155,9 @@ app.post('/api/analyze-terms', async (req, res) => {
     typeof inputText !== 'string' ||
     inputText.trim().length === 0
   ) {
-    return res
-      .status(400)
-      .json({ message: 'Text input is required in the request body.' });
+    return res.status(400).json({
+      message: 'Content (korean_content) is required in the request body.',
+    });
   }
 
   try {
