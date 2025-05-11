@@ -1,10 +1,7 @@
 {
   "apphosting": {
     "backend": "smartglot",
-    "region": "us-central1",
-    "public": "smartglot-react/dist"
-  },
-  "functions": {
-    "source": "functions"
+    "region": "asia-east1",
+    "source": "."
   }
 }
