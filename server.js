@@ -11,6 +11,15 @@ const __dirname = path.dirname(__filename);
 
 const app = express();
 app.use(express.json()); // Add this line to parse JSON request bodies
+
+// COOP 헤더 설정 미들웨어 추가
+app.use((req, res, next) => {
+  res.setHeader('Cross-Origin-Opener-Policy', 'same-origin-allow-popups');
+  // 참고: COEP 헤더도 필요한 경우 함께 설정할 수 있습니다.
+  // res.setHeader('Cross-Origin-Embedder-Policy', 'require-corp'); // 또는 'unsafe-none'
+  next();
+});
+
 const port = process.env.PORT || 8080;
 
 // Elasticsearch 클라이언트 초기화
