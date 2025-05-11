@@ -11,6 +11,14 @@ const __dirname = path.dirname(__filename);
 
 const app = express();
 app.use(express.json()); // Add this line to parse JSON request bodies
+
+// COOP 헤더 설정 미들웨어 추가
+app.use((req, res, next) => {
+  res.setHeader('Cross-Origin-Opener-Policy', 'same-origin');
+  res.setHeader('Cross-Origin-Embedder-Policy', 'credentialless');
+  next();
+});
+
 const port = process.env.PORT || 8080;
 
 // Elasticsearch 클라이언트 초기화
