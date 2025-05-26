@@ -13,6 +13,11 @@ const app = express();
 app.use(express.json()); // Add this line to parse JSON request bodies
 const port = process.env.PORT || 8080;
 
+console.log(
+  `[Server] Current working directory (process.cwd()): ${process.cwd()}`,
+);
+console.log(`[Server] __dirname: ${__dirname}`);
+
 // Elasticsearch 클라이언트 초기화
 let esClient;
 if (process.env.ES_URL && process.env.ES_API_KEY) {
@@ -79,10 +84,23 @@ const STOP_WORDS = new Set([
   // Add others if needed
 ]);
 
-// React 앱의 정적 파일 제공
-// App Hosting 환경에서는 빌드 후 smartglot-react/dist 경로에 파일이 위치하게 됩니다.
+// React 앱의 정적 파일 제공 경로 설정
 const reactAppDistPath = path.join(__dirname, 'smartglot-react', 'dist');
-app.use(express.static(reactAppDistPath));
+console.log(
+  `[Server] Attempting to serve static files from: ${reactAppDistPath}`,
+);
+
+// 정적 파일 제공 미들웨어
+app.use(
+  express.static(reactAppDistPath, {
+    // MIME 타입 문제 해결을 위해 content-type 명시 시도 (일반적으로는 불필요)
+    // setHeaders: function (res, path) {
+    //   if (path.endsWith('.js')) {
+    //     res.setHeader('Content-Type', 'application/javascript');
+    //   }
+    // }
+  }),
+);
 
 // 간단한 API 라우트 예시 (필요에 따라 추가/수정)
 app.get('/api/hello', (req, res) => {
@@ -229,10 +247,32 @@ app.post('/api/analyze-terms', async (req, res) => {
   }
 });
 
-// 모든 다른 GET 요청은 React 앱의 index.html을 서빙
-// 이 라우트는 다른 모든 API 라우트 *뒤에* 위치해야 합니다.
+// 모든 다른 GET 요청은 React 앱의 index.html을 서빙 (SPA fallback)
+// 이 라우트는 다른 모든 API 라우트 및 static 미들웨어 *뒤에* 위치해야 합니다.
 app.get('*', (req, res) => {
-  res.sendFile(path.join(reactAppDistPath, 'index.html'));
+  // 요청된 경로가 API가 아니고 파일 확장자가 없는 경우 (또는 특정 확장자가 아닌 경우)에만 index.html을 반환하도록 시도
+  if (!req.path.startsWith('/api') && !path.extname(req.path)) {
+    const indexPath = path.join(reactAppDistPath, 'index.html');
+    console.log(
+      `[Server] Fallback: Serving index.html for path: ${req.path} from ${indexPath}`,
+    );
+    res.sendFile(indexPath, (err) => {
+      if (err) {
+        console.error(`[Server] Error sending index.html: ${err.message}`);
+        res.status(500).send(err.message);
+      }
+    });
+  } else if (!req.path.startsWith('/api')) {
+    // API가 아닌 다른 정적 파일 요청인데 express.static에서 처리 못했다면 404
+    // (예: /assets/nonexistent.js)
+    console.log(
+      `[Server] Fallback: Static file not found for path: ${req.path}`,
+    );
+    res.status(404).send('Not found');
+  } else {
+    // API 경로인데 일치하는 라우트가 없는 경우 (Express가 알아서 404 처리)
+    // next(); // 또는 명시적으로 404 처리
+  }
 });
 
 app.listen(port, () => {
