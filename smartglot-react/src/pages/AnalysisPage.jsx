@@ -1,4 +1,4 @@
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useRef } from 'react';
 import { useOutletContext } from 'react-router-dom';
 import { useAuth } from '../contexts/AuthContext';
 import { storage } from '../firebase/config'; // Firebase Storage 사용
@@ -8,11 +8,12 @@ function AnalysisPage() {
   const { currentUser, analyzePdfWithCloudFunction } = useAuth();
   const [file, setFile] = useState(null);
   const [analysisResults, setAnalysisResults] = useState(null);
-  const [uploadStatus, setUploadStatus] = useState('');
+
   const [analysisError, setAnalysisError] = useState('');
   const [isAnalyzing, setIsAnalyzing] = useState(false);
   const [currentFileName, setCurrentFileName] = useState('');
   const [isDraggingOver, setIsDraggingOver] = useState(false);
+  const fileInputRef = useRef(null);
 
   const outletContext = useOutletContext();
   console.log('[AnalysisPage] Outlet Context received:', outletContext);
@@ -36,7 +37,7 @@ function AnalysisPage() {
         selectedHistoryItem.fileName || 'Selected from history',
       );
       setFile(null);
-      setUploadStatus(`Displaying history: ${selectedHistoryItem.fileName}`);
+
       setAnalysisError('');
       setIsAnalyzing(false);
       if (setSelectedHistoryItem) {
@@ -53,18 +54,42 @@ function AnalysisPage() {
   }, [selectedHistoryItem, setSelectedHistoryItem]);
 
   const handleFileChange = (e) => {
-    const selectedFile = e.target.files ? e.target.files[0] : null;
-    if (selectedFile && selectedFile.type === 'application/pdf') {
-      setFile(selectedFile);
-      setCurrentFileName(selectedFile.name);
-      setUploadStatus(`Selected: ${selectedFile.name}`);
-      setAnalysisResults(null);
-      setAnalysisError('');
+    // Extract the file from the event (could be from input change or drop)
+    const newSelectedFile = e.target.files ? e.target.files[0] : null;
+
+    if (newSelectedFile) {
+      // Check if it's a PDF by type OR by name extension as a fallback
+      const isPdfFile =
+        newSelectedFile.type === 'application/pdf' ||
+        (newSelectedFile.name &&
+          newSelectedFile.name.toLowerCase().endsWith('.pdf'));
+
+      if (isPdfFile) {
+        setFile(newSelectedFile);
+        setCurrentFileName(newSelectedFile.name);
+
+        setAnalysisResults(null);
+        setAnalysisError('');
+      } else {
+        // File selected is not a PDF
+        setFile(null);
+        setCurrentFileName('');
+
+        // If the event came from a file input, clear its value
+        if (e.target && typeof e.target.value === 'string') {
+          e.target.value = null;
+        }
+      }
     } else {
+      // No file was selected or dropped
       setFile(null);
       setCurrentFileName('');
-      setUploadStatus('Please select a PDF file.');
-      if (e.target) e.target.value = null;
+
+      // If the event came from a file input, clear its value
+      // (e.g., user cancels the file dialog after selecting a file initially)
+      if (e.target && typeof e.target.value === 'string') {
+        e.target.value = null;
+      }
     }
   };
 
@@ -81,7 +106,7 @@ function AnalysisPage() {
 
     setIsAnalyzing(true);
     setCurrentFileName(file.name);
-    setUploadStatus('Uploading PDF...');
+
     setAnalysisError('');
     setAnalysisResults(null);
     let storagePath = null;
@@ -93,7 +118,6 @@ function AnalysisPage() {
       await storageRef.put(file);
       // const downloadURL = await (await storageRef.put(file)).ref.getDownloadURL(); // 필요시 이렇게 사용 가능
       console.log('File uploaded to:', storagePath);
-      setUploadStatus('Processing PDF with Vision AI...');
 
       // 2. Call the Cloud Function to analyze the PDF
       const terms = await analyzePdfWithCloudFunction(storagePath, file.name);
@@ -103,13 +127,12 @@ function AnalysisPage() {
       } else {
         setAnalysisResults([]); // 결과 없음을 명시적으로 표시
       }
-      setUploadStatus('Analysis complete.');
     } catch (error) {
       console.error('PDF analysis process failed:', error);
       setAnalysisError(
         `Error during PDF analysis: ${error.message || 'Unknown error'}`,
       );
-      setUploadStatus('Error during analysis.');
+
       // 실패 시 스토리지 파일 삭제 시도 (선택적)
       if (storagePath) {
         try {
@@ -149,10 +172,6 @@ function AnalysisPage() {
     const droppedFiles = e.dataTransfer.files;
     if (droppedFiles && droppedFiles.length > 0) {
       handleFileChange({ target: { files: droppedFiles } });
-      const fileInput = document.getElementById('pdfInput');
-      if (fileInput) {
-        fileInput.value = '';
-      }
     }
   };
 
@@ -180,36 +199,53 @@ function AnalysisPage() {
           transition: 'border-color 0.3s ease',
         }}
       >
-        <label
-          htmlFor="pdfInput"
-          style={{ display: 'block', marginBottom: '10px' }}
-        >
-          Drag and drop a PDF file here, or click to select a file:
+        <label style={{ display: 'block', marginBottom: '15px' }}>
+          Drag and drop a PDF file here, or use the button below:
         </label>
+
         <input
           type="file"
           id="pdfInput"
+          ref={fileInputRef}
           accept=".pdf"
           onChange={handleFileChange}
-          style={{ display: 'block', marginTop: '5px', marginBottom: '10px' }}
+          style={{ display: 'none' }}
           disabled={isAnalyzing}
         />
-        <button
-          id="analyzePdfButton"
-          onClick={handleAnalyzePdf}
-          disabled={!file || isAnalyzing}
-        >
-          {isAnalyzing ? 'Analyzing...' : 'Analyze PDF'}
-        </button>
-        {uploadStatus && (
-          <span
-            id="pdf-upload-status"
-            style={{ marginLeft: '10px', fontSize: '0.9em' }}
+
+        <div style={{ marginTop: '10px' }}>
+          <button
+            type="button"
+            onClick={() => fileInputRef.current && fileInputRef.current.click()}
+            disabled={isAnalyzing}
+            style={{
+              padding: '8px 15px',
+              border: '1px solid #ccc',
+              borderRadius: '4px',
+              cursor: 'pointer',
+              backgroundColor: '#000',
+              marginRight: '10px',
+            }}
           >
-            {uploadStatus}
+            파일 선택
+          </button>
+          <span
+            style={{
+              color: currentFileName ? '#fff' : '#777',
+              fontSize: '0.9em',
+            }}
+          >
+            {currentFileName || '선택된 파일 없음'}
           </span>
-        )}
+        </div>
       </div>
+      <button
+        id="analyzePdfButton"
+        onClick={handleAnalyzePdf}
+        disabled={!file || isAnalyzing}
+      >
+        {isAnalyzing ? 'Analyzing...' : 'Analyze PDF'}
+      </button>
       <h2>Top Terms</h2>
       {analysisError && (
         <div style={{ color: 'red', marginTop: '10px' }}>{analysisError}</div>
