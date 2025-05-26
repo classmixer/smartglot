@@ -66,3 +66,64 @@ button:focus-visible {
     background-color: #f9f9f9;
   }
 }
+
+/* Responsive adjustments */
+@media (max-width: 768px) {
+  body {
+    font-size: 15px; /* 모바일에서 기본 폰트 약간 줄이기 */
+  }
+
+  .container {
+    padding: 15px; /* 모바일에서 컨테이너 좌우 패딩 줄이기 */
+    margin-left: 0 !important; /* 사이드바 열렸을 때 main의 margin-left 강제 초기화 (필요시) */
+  }
+
+  h1,
+  .h1 {
+    font-size: 2em; /* 모바일에서 h1 크기 조정 */
+  }
+
+  h2,
+  .h2 {
+    font-size: 1.6em; /* 모바일에서 h2 크기 조정 */
+  }
+
+  h3,
+  .h3 {
+    font-size: 1.3em; /* 모바일에서 h3 크기 조정 */
+  }
+
+  button,
+  input[type='text'],
+  input[type='email'],
+  input[type='password'],
+  input[type='file'] {
+    font-size: 1em; /* 입력 필드 및 버튼 폰트 크기 일관성 */
+    padding: 10px; /* 터치 용이성을 위해 패딩 증가 */
+  }
+
+  input[type='file'] {
+    padding: 5px; /* 파일 인풋은 패딩 약간 다르게 */
+  }
+}
+
+@media (max-width: 480px) {
+  body {
+    font-size: 14px;
+  }
+  .container {
+    padding: 10px;
+  }
+  h1,
+  .h1 {
+    font-size: 1.8em;
+  }
+  h2,
+  .h2 {
+    font-size: 1.4em;
+  }
+  h3,
+  .h3 {
+    font-size: 1.2em;
+  }
+}
