@@ -1,4 +1,4 @@
-import React from 'react';
+import React, { useState } from 'react';
 import {
   BrowserRouter as Router,
   Routes,
@@ -12,13 +12,30 @@ import WelcomePage from './pages/WelcomePage';
 import AuthPage from './pages/AuthPage';
 import AnalysisPage from './pages/AnalysisPage';
 import ProfilePage from './pages/ProfilePage';
+import HistorySidebar from './components/HistorySidebar';
 
 // 공통 레이아웃 컴포넌트 정의
-const MainLayout = () => (
+const MainLayout = ({
+  isSidebarOpen,
+  toggleSidebar,
+  setSelectedHistoryItem,
+  selectedHistoryItem,
+}) => (
   <>
-    <Header />
-    <main className="container">
-      <Outlet />
+    <Header onToggleSidebar={toggleSidebar} />
+    <HistorySidebar
+      isOpen={isSidebarOpen}
+      onClose={toggleSidebar}
+      onSelectHistory={setSelectedHistoryItem}
+    />
+    <main
+      className="container"
+      style={{
+        marginLeft: isSidebarOpen ? '300px' : '0',
+        transition: 'margin-left 0.3s ease-in-out',
+      }}
+    >
+      <Outlet context={{ selectedHistoryItem, setSelectedHistoryItem }} />
     </main>
   </>
 );
@@ -50,11 +67,27 @@ function PublicRouteOnly() {
 }
 
 function App() {
+  const [isSidebarOpen, setIsSidebarOpen] = useState(false);
+  const [selectedHistoryItem, setSelectedHistoryItem] = useState(null);
+
+  const toggleSidebar = () => {
+    setIsSidebarOpen(!isSidebarOpen);
+  };
+
   return (
     <AuthProvider>
       <Router>
         <Routes>
-          <Route element={<MainLayout />}>
+          <Route
+            element={
+              <MainLayout
+                isSidebarOpen={isSidebarOpen}
+                toggleSidebar={toggleSidebar}
+                setSelectedHistoryItem={setSelectedHistoryItem}
+                selectedHistoryItem={selectedHistoryItem}
+              />
+            }
+          >
             <Route element={<PublicRouteOnly />}>
               <Route path="/" element={<WelcomePage />} />
               <Route path="/auth" element={<AuthPage />} />

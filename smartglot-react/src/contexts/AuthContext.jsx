@@ -1,5 +1,5 @@
 import React, { createContext, useContext, useEffect, useState } from 'react';
-import { firebase, auth, functions } from '../firebase/config'; // Firebase 설정 import
+import { firebase, auth, functions, database } from '../firebase/config'; // Firebase 설정 import
 
 const AuthContext = createContext();
 
@@ -136,15 +136,65 @@ export function AuthProvider({ children }) {
   }
 
   // PDF 분석 함수 호출 (Firebase Functions)
-  async function analyzePdfWithCloudFunction(storagePath) {
+  async function analyzePdfWithCloudFunction(storagePath, originalFileName) {
     if (!currentUser) throw new Error('User not logged in for PDF analysis.');
     try {
       const analyzePdfFunction = functions.httpsCallable('analyzePdf');
       const result = await analyzePdfFunction({ storagePath });
-      return result.data; // 함수는 result.data에 결과를 반환
+
+      // 분석 성공 시 기록 저장
+      if (result.data && result.data.length > 0) {
+        await saveAnalysisToHistory(originalFileName, storagePath, result.data);
+      }
+
+      return result.data;
     } catch (error) {
       console.error('PDF analysis function call failed:', error);
       throw error;
+    }
+  }
+
+  // 새로운 함수: 분석 기록 저장
+  async function saveAnalysisToHistory(fileName, storagePath, terms) {
+    if (!currentUser) return;
+    const historyRef = database.ref(`histories/${currentUser.uid}`);
+    const newHistoryEntryRef = historyRef.push(); // 고유 키 생성
+    try {
+      await newHistoryEntryRef.set({
+        fileName: fileName,
+        storagePath: storagePath, // 나중에 재분석 또는 파일 접근을 위해 저장
+        termsCount: terms.length,
+        topTerms: terms.slice(0, 3).map((t) => t.term), // 상위 3개 용어 미리보기용
+        analysisDate: firebase.database.ServerValue.TIMESTAMP, // 서버 시간으로 기록
+        result: terms, // 전체 분석 결과 저장
+      });
+      console.log('Analysis history saved for:', fileName);
+    } catch (e) {
+      console.error('Failed to save analysis history:', e);
+      // 여기서 사용자에게 알림을 줄 수도 있습니다.
+    }
+  }
+
+  // 새로운 함수: 분석 기록 조회
+  async function getAnalysisHistory() {
+    if (!currentUser) return [];
+    try {
+      const historyRef = database
+        .ref(`histories/${currentUser.uid}`)
+        .orderByChild('analysisDate') // 날짜순으로 정렬 (내림차순은 클라이언트에서 처리)
+        .limitToLast(20); // 최근 20개 기록만 가져오기 (성능 고려)
+      const snapshot = await historyRef.once('value');
+      const historyData = [];
+      snapshot.forEach((childSnapshot) => {
+        historyData.push({
+          id: childSnapshot.key,
+          ...childSnapshot.val(),
+        });
+      });
+      return historyData.reverse(); // 최신순으로 클라이언트에서 뒤집기
+    } catch (e) {
+      console.error('Failed to fetch analysis history:', e);
+      return []; // 오류 발생 시 빈 배열 반환
     }
   }
 
@@ -192,6 +242,8 @@ export function AuthProvider({ children }) {
     changeUserPassword,
     deleteUserAccount,
     analyzePdfWithCloudFunction,
+    saveAnalysisToHistory,
+    getAnalysisHistory,
   };
 
   return (

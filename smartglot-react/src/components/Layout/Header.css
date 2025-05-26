@@ -1,0 +1,73 @@
+.app-header {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  padding: 10px 20px;
+  background-color: #f0f0f0; /* Or your preferred header background */
+  border-bottom: 1px solid #ddd;
+}
+
+.header-left {
+  display: flex;
+  align-items: center;
+}
+
+.logo-link h1 {
+  margin: 0;
+  font-size: 1.8em;
+  color: #333;
+  text-decoration: none;
+}
+
+.logo-link:hover h1 {
+  color: #007bff;
+}
+
+.sidebar-toggle-btn {
+  background: none;
+  border: none;
+  font-size: 1.8em; /* Adjust size as needed */
+  cursor: pointer;
+  margin-right: 15px; /* 로고와의 간격 */
+  color: #333;
+}
+
+.sidebar-toggle-btn:hover {
+  color: #007bff;
+}
+
+.header-nav a,
+.logout-button {
+  margin-left: 15px;
+  text-decoration: none;
+  color: #333;
+  font-size: 1em;
+  padding: 5px 10px;
+  border-radius: 4px;
+  transition:
+    background-color 0.2s ease,
+    color 0.2s ease;
+}
+
+.header-nav a:hover {
+  background-color: #e9ecef;
+  color: #0056b3;
+}
+
+.logout-button {
+  background-color: #dc3545;
+  color: white;
+  border: none;
+  cursor: pointer;
+}
+
+.logout-button:hover {
+  background-color: #c82333;
+  color: white;
+}
+
+/* 기존 로그인/회원가입 버튼 스타일이 있다면 아래처럼 수정 또는 유지 */
+#headerLoginButton,
+#headerSignupButton {
+  /* 기존 스타일 유지 또는 위 .header-nav a 스타일과 통합 */
+}
