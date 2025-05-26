@@ -12,6 +12,7 @@ function AnalysisPage() {
   const [analysisError, setAnalysisError] = useState('');
   const [isAnalyzing, setIsAnalyzing] = useState(false);
   const [currentFileName, setCurrentFileName] = useState('');
+  const [isDraggingOver, setIsDraggingOver] = useState(false);
 
   const outletContext = useOutletContext();
   console.log('[AnalysisPage] Outlet Context received:', outletContext);
@@ -52,7 +53,7 @@ function AnalysisPage() {
   }, [selectedHistoryItem, setSelectedHistoryItem]);
 
   const handleFileChange = (e) => {
-    const selectedFile = e.target.files[0];
+    const selectedFile = e.target.files ? e.target.files[0] : null;
     if (selectedFile && selectedFile.type === 'application/pdf') {
       setFile(selectedFile);
       setCurrentFileName(selectedFile.name);
@@ -63,7 +64,7 @@ function AnalysisPage() {
       setFile(null);
       setCurrentFileName('');
       setUploadStatus('Please select a PDF file.');
-      e.target.value = null;
+      if (e.target) e.target.value = null;
     }
   };
 
@@ -123,6 +124,38 @@ function AnalysisPage() {
     }
   };
 
+  const handleDragEnter = (e) => {
+    e.preventDefault();
+    e.stopPropagation();
+    setIsDraggingOver(true);
+  };
+
+  const handleDragLeave = (e) => {
+    e.preventDefault();
+    e.stopPropagation();
+    setIsDraggingOver(false);
+  };
+
+  const handleDragOver = (e) => {
+    e.preventDefault();
+    e.stopPropagation();
+  };
+
+  const handleDrop = (e) => {
+    e.preventDefault();
+    e.stopPropagation();
+    setIsDraggingOver(false);
+
+    const droppedFiles = e.dataTransfer.files;
+    if (droppedFiles && droppedFiles.length > 0) {
+      handleFileChange({ target: { files: droppedFiles } });
+      const fileInput = document.getElementById('pdfInput');
+      if (fileInput) {
+        fileInput.value = '';
+      }
+    }
+  };
+
   return (
     <div id="analysis-container">
       {' '}
@@ -133,8 +166,26 @@ function AnalysisPage() {
           : 'Upload PDF to Analyze'}
       </h2>
       <hr style={{ margin: '20px 0' }} />
-      <div id="pdf-analysis-section">
-        <label htmlFor="pdfInput">Upload a PDF to analyze a new file:</label>
+      <div
+        id="pdf-analysis-section"
+        onDragEnter={handleDragEnter}
+        onDragLeave={handleDragLeave}
+        onDragOver={handleDragOver}
+        onDrop={handleDrop}
+        style={{
+          border: isDraggingOver ? '2px dashed #007bff' : '2px dashed #ccc',
+          padding: '20px',
+          textAlign: 'center',
+          marginBottom: '20px',
+          transition: 'border-color 0.3s ease',
+        }}
+      >
+        <label
+          htmlFor="pdfInput"
+          style={{ display: 'block', marginBottom: '10px' }}
+        >
+          Drag and drop a PDF file here, or click to select a file:
+        </label>
         <input
           type="file"
           id="pdfInput"
