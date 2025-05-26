@@ -6,6 +6,8 @@
   "type": "module",
   "scripts": {
     "start": "node server.js",
+    "build": "cd smartglot-react && npm run build",
+    "gcp-build": "cd smartglot-react && npm install && npm run build && cd .. && npm install",
     "test": "echo \"Error: no test specified\" && exit 1"
   },
   "keywords": [],
