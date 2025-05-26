@@ -1,19 +1,20 @@
 import React, { useState, useEffect, useRef } from 'react';
 import { useOutletContext } from 'react-router-dom';
 import { useAuth } from '../contexts/AuthContext';
-import { storage } from '../firebase/config'; // Firebase Storage 사용
+import { storage, database } from '../firebase/config'; // Firebase Storage 및 database 사용
 // import './AnalysisPage.css'; // AnalysisPage에만 적용될 스타일이 있다면 만듭니다.
 
 function AnalysisPage() {
   const { currentUser, analyzePdfWithCloudFunction } = useAuth();
   const [file, setFile] = useState(null);
   const [analysisResults, setAnalysisResults] = useState(null);
-
+  // const [uploadStatus, setUploadStatus] = useState(''); // User removed
   const [analysisError, setAnalysisError] = useState('');
   const [isAnalyzing, setIsAnalyzing] = useState(false);
   const [currentFileName, setCurrentFileName] = useState('');
   const [isDraggingOver, setIsDraggingOver] = useState(false);
   const fileInputRef = useRef(null);
+  const [currentHistoryItemId, setCurrentHistoryItemId] = useState(null); // 현재 히스토리 항목 ID 상태
 
   const outletContext = useOutletContext();
   console.log('[AnalysisPage] Outlet Context received:', outletContext);
@@ -36,8 +37,9 @@ function AnalysisPage() {
       setCurrentFileName(
         selectedHistoryItem.fileName || 'Selected from history',
       );
+      setCurrentHistoryItemId(selectedHistoryItem.id); // 히스토리 ID 저장 (selectedHistoryItem.id가 키라고 가정)
       setFile(null);
-
+      // setUploadStatus(`Displaying history: ${selectedHistoryItem.fileName}`); // User removed
       setAnalysisError('');
       setIsAnalyzing(false);
       if (setSelectedHistoryItem) {
@@ -53,12 +55,25 @@ function AnalysisPage() {
     }
   }, [selectedHistoryItem, setSelectedHistoryItem]);
 
+  // 새 분석을 위한 상태 초기화 함수
+  const resetStateForNewAnalysis = () => {
+    setFile(null);
+    setAnalysisResults(null);
+    setAnalysisError('');
+    setCurrentFileName('');
+    setCurrentHistoryItemId(null); // 히스토리 컨텍스트 초기화
+    // setUploadStatus('Please select a PDF file.'); // User removed
+    if (fileInputRef.current) {
+      fileInputRef.current.value = ''; // 파일 입력 필드 실제 값 초기화
+    }
+  };
+
   const handleFileChange = (e) => {
-    // Extract the file from the event (could be from input change or drop)
     const newSelectedFile = e.target.files ? e.target.files[0] : null;
 
+    resetStateForNewAnalysis(); // 새 파일 선택 시 이전 상태 및 히스토리 ID 초기화
+
     if (newSelectedFile) {
-      // Check if it's a PDF by type OR by name extension as a fallback
       const isPdfFile =
         newSelectedFile.type === 'application/pdf' ||
         (newSelectedFile.name &&
@@ -67,28 +82,10 @@ function AnalysisPage() {
       if (isPdfFile) {
         setFile(newSelectedFile);
         setCurrentFileName(newSelectedFile.name);
-
-        setAnalysisResults(null);
-        setAnalysisError('');
+        // setUploadStatus(`Selected: ${newSelectedFile.name}`); // User removed
       } else {
-        // File selected is not a PDF
-        setFile(null);
-        setCurrentFileName('');
-
-        // If the event came from a file input, clear its value
-        if (e.target && typeof e.target.value === 'string') {
-          e.target.value = null;
-        }
-      }
-    } else {
-      // No file was selected or dropped
-      setFile(null);
-      setCurrentFileName('');
-
-      // If the event came from a file input, clear its value
-      // (e.g., user cancels the file dialog after selecting a file initially)
-      if (e.target && typeof e.target.value === 'string') {
-        e.target.value = null;
+        // setUploadStatus('Invalid file type. Please select a PDF file.'); // User removed
+        setAnalysisError('Invalid file type. Please select a PDF file.'); // 오류 메시지는 analysisError에 표시
       }
     }
   };
@@ -105,10 +102,11 @@ function AnalysisPage() {
     }
 
     setIsAnalyzing(true);
-    setCurrentFileName(file.name);
-
+    // setCurrentFileName(file.name); // 이미 handleFileChange에서 설정됨
+    // setUploadStatus('Uploading PDF...'); // User removed
     setAnalysisError('');
     setAnalysisResults(null);
+    setCurrentHistoryItemId(null); // 새 분석이므로 히스토리 ID 초기화
     let storagePath = null;
 
     try {
@@ -118,6 +116,7 @@ function AnalysisPage() {
       await storageRef.put(file);
       // const downloadURL = await (await storageRef.put(file)).ref.getDownloadURL(); // 필요시 이렇게 사용 가능
       console.log('File uploaded to:', storagePath);
+      // setUploadStatus('Processing PDF with Vision AI...'); // User removed
 
       // 2. Call the Cloud Function to analyze the PDF
       const terms = await analyzePdfWithCloudFunction(storagePath, file.name);
@@ -127,11 +126,17 @@ function AnalysisPage() {
       } else {
         setAnalysisResults([]); // 결과 없음을 명시적으로 표시
       }
+      // setUploadStatus('Analysis complete.'); // User removed
+      // 중요: 새 분석 결과를 히스토리에 저장하는 로직이 여기에 추가되어야 합니다.
+      // (현재 요청 범위는 아니지만, 실제 서비스에서는 필요합니다)
+      // 예: const newHistoryId = await saveNewAnalysisToHistory(currentUser.uid, file.name, terms, storagePath);
+      //     setCurrentHistoryItemId(newHistoryId); // 새로 저장된 히스토리 ID로 설정
     } catch (error) {
       console.error('PDF analysis process failed:', error);
       setAnalysisError(
         `Error during PDF analysis: ${error.message || 'Unknown error'}`,
       );
+      // setUploadStatus('Error during analysis.'); // User removed
 
       // 실패 시 스토리지 파일 삭제 시도 (선택적)
       if (storagePath) {
@@ -172,6 +177,35 @@ function AnalysisPage() {
     const droppedFiles = e.dataTransfer.files;
     if (droppedFiles && droppedFiles.length > 0) {
       handleFileChange({ target: { files: droppedFiles } });
+    }
+  };
+
+  // 용어 삭제 핸들러 추가
+  const handleDeleteTerm = async (termIndex) => {
+    if (!analysisResults) return;
+
+    const updatedResults = analysisResults.filter(
+      (_, index) => index !== termIndex,
+    );
+    setAnalysisResults(updatedResults);
+
+    if (currentUser && currentHistoryItemId) {
+      try {
+        const historyItemRef = database.ref(
+          `histories/${currentUser.uid}/${currentHistoryItemId}/result`,
+        );
+        await historyItemRef.set(updatedResults);
+        console.log(
+          `Terms updated in Firebase for history item: ${currentHistoryItemId}`,
+        );
+      } catch (error) {
+        console.error('Failed to update terms in Firebase:', error);
+        setAnalysisError(
+          'Failed to sync term deletion with database. Please try refreshing.',
+        );
+        // 변경 사항을 롤백하거나 사용자에게 명확한 오류를 표시할 수 있습니다.
+        // 예: setAnalysisResults(analysisResults); // 이전 상태로 롤백 (원본 배열을 어딘가에 보관해야 함)
+      }
     }
   };
 
@@ -254,9 +288,47 @@ function AnalysisPage() {
         {analysisResults ? (
           analysisResults.length > 0 ? (
             analysisResults.map((termData, index) => (
-              <div key={index} className="result-item">
-                <span className="term">{termData.term}</span>
-                <span className="freq">(Frequency: {termData.frequency})</span>
+              <div
+                key={index}
+                className="result-item"
+                style={{
+                  display: 'flex',
+                  justifyContent: 'space-between',
+                  alignItems: 'center',
+                  padding: '5px 0',
+                  borderBottom: '1px solid #eee',
+                }}
+              >
+                <div>
+                  <span className="term" style={{ fontWeight: 'bold' }}>
+                    {termData.term}
+                  </span>
+                  <span
+                    className="freq"
+                    style={{
+                      marginLeft: '10px',
+                      fontSize: '0.9em',
+                      color: '#555',
+                    }}
+                  >
+                    (Frequency: {termData.frequency})
+                  </span>
+                </div>
+                <button
+                  onClick={() => handleDeleteTerm(index)}
+                  style={{
+                    marginLeft: '10px',
+                    padding: '3px 8px',
+                    fontSize: '0.8em',
+                    color: '#fff',
+                    backgroundColor: '#dc3545', // Bootstrap's danger color
+                    border: 'none',
+                    borderRadius: '4px',
+                    cursor: 'pointer',
+                  }}
+                >
+                  삭제
+                </button>
               </div>
             ))
           ) : (
