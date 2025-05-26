@@ -48,6 +48,10 @@ function HistorySidebar({ isOpen, onClose, onSelectHistory }) {
   }, [isOpen, currentUser, fetchHistory, hasFetched]);
 
   const handleHistoryItemClick = (historyItem) => {
+    console.log(
+      '[HistorySidebar] Item clicked. Calling onSelectHistory with:',
+      historyItem,
+    );
     if (onSelectHistory) {
       onSelectHistory(historyItem);
     }

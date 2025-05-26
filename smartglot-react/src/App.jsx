@@ -5,6 +5,7 @@ import {
   Route,
   Navigate,
   Outlet,
+  useOutletContext,
 } from 'react-router-dom';
 import { AuthProvider, useAuth } from './contexts/AuthContext';
 import Header from './components/Layout/Header';
@@ -43,6 +44,8 @@ const MainLayout = ({
 // 인증된 사용자만 접근 가능한 라우트
 function PrivateRoute() {
   const { currentUser, loading } = useAuth();
+  const outletContext = useOutletContext();
+
   if (loading) {
     return (
       <div className="container" style={{ textAlign: 'center' }}>
@@ -50,7 +53,11 @@ function PrivateRoute() {
       </div>
     );
   }
-  return currentUser ? <Outlet /> : <Navigate to="/auth" replace />;
+  return currentUser ? (
+    <Outlet context={outletContext} />
+  ) : (
+    <Navigate to="/auth" replace />
+  );
 }
 
 // 로그인/회원가입 페이지는 이미 로그인한 경우 분석 페이지로 리디렉션
@@ -74,6 +81,18 @@ function App() {
     setIsSidebarOpen(!isSidebarOpen);
   };
 
+  // 로그 추가: setSelectedHistoryItem이 호출될 때마다 이 App 컴포넌트가 리렌더링되고,
+  // selectedHistoryItem의 현재 값을 보여줍니다.
+  console.log(
+    '[App.jsx] Current selectedHistoryItem state:',
+    selectedHistoryItem,
+  );
+
+  const handleSetSelectedHistoryItem = (item) => {
+    console.log('[App.jsx] setSelectedHistoryItem called with:', item);
+    setSelectedHistoryItem(item);
+  };
+
   return (
     <AuthProvider>
       <Router>
@@ -83,7 +102,7 @@ function App() {
               <MainLayout
                 isSidebarOpen={isSidebarOpen}
                 toggleSidebar={toggleSidebar}
-                setSelectedHistoryItem={setSelectedHistoryItem}
+                setSelectedHistoryItem={handleSetSelectedHistoryItem}
                 selectedHistoryItem={selectedHistoryItem}
               />
             }

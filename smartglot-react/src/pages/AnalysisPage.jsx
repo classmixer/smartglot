@@ -13,11 +13,23 @@ function AnalysisPage() {
   const [isAnalyzing, setIsAnalyzing] = useState(false);
   const [currentFileName, setCurrentFileName] = useState('');
 
-  const { selectedHistoryItem, setSelectedHistoryItem } =
-    useOutletContext() || {};
+  const outletContext = useOutletContext();
+  console.log('[AnalysisPage] Outlet Context received:', outletContext);
+
+  // outletContext가 null이거나 undefined일 수 있으므로 안전하게 구조 분해 할당
+  const selectedHistoryItem = outletContext?.selectedHistoryItem;
+  const setSelectedHistoryItem = outletContext?.setSelectedHistoryItem;
 
   useEffect(() => {
+    console.log(
+      '[AnalysisPage] useEffect triggered. selectedHistoryItem from state:',
+      selectedHistoryItem,
+    );
     if (selectedHistoryItem) {
+      console.log(
+        '[AnalysisPage] selectedHistoryItem.result from state:',
+        selectedHistoryItem.result,
+      );
       setAnalysisResults(selectedHistoryItem.result || []);
       setCurrentFileName(
         selectedHistoryItem.fileName || 'Selected from history',
@@ -26,7 +38,16 @@ function AnalysisPage() {
       setUploadStatus(`Displaying history: ${selectedHistoryItem.fileName}`);
       setAnalysisError('');
       setIsAnalyzing(false);
-      if (setSelectedHistoryItem) setSelectedHistoryItem(null);
+      if (setSelectedHistoryItem) {
+        console.log(
+          '[AnalysisPage] Calling setSelectedHistoryItem(null) from useEffect',
+        );
+        setSelectedHistoryItem(null);
+      }
+    } else {
+      console.log(
+        '[AnalysisPage] selectedHistoryItem is null or undefined in useEffect, not updating results.',
+      );
     }
   }, [selectedHistoryItem, setSelectedHistoryItem]);
 
