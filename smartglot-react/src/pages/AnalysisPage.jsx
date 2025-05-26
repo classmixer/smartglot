@@ -1,4 +1,5 @@
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
+import { useOutletContext } from 'react-router-dom';
 import { useAuth } from '../contexts/AuthContext';
 import { storage } from '../firebase/config'; // Firebase Storage 사용
 // import './AnalysisPage.css'; // AnalysisPage에만 적용될 스타일이 있다면 만듭니다.
@@ -10,18 +11,59 @@ function AnalysisPage() {
   const [uploadStatus, setUploadStatus] = useState('');
   const [analysisError, setAnalysisError] = useState('');
   const [isAnalyzing, setIsAnalyzing] = useState(false);
+  const [currentFileName, setCurrentFileName] = useState('');
+
+  const outletContext = useOutletContext();
+  console.log('[AnalysisPage] Outlet Context received:', outletContext);
+
+  // outletContext가 null이거나 undefined일 수 있으므로 안전하게 구조 분해 할당
+  const selectedHistoryItem = outletContext?.selectedHistoryItem;
+  const setSelectedHistoryItem = outletContext?.setSelectedHistoryItem;
+
+  useEffect(() => {
+    console.log(
+      '[AnalysisPage] useEffect triggered. selectedHistoryItem from state:',
+      selectedHistoryItem,
+    );
+    if (selectedHistoryItem) {
+      console.log(
+        '[AnalysisPage] selectedHistoryItem.result from state:',
+        selectedHistoryItem.result,
+      );
+      setAnalysisResults(selectedHistoryItem.result || []);
+      setCurrentFileName(
+        selectedHistoryItem.fileName || 'Selected from history',
+      );
+      setFile(null);
+      setUploadStatus(`Displaying history: ${selectedHistoryItem.fileName}`);
+      setAnalysisError('');
+      setIsAnalyzing(false);
+      if (setSelectedHistoryItem) {
+        console.log(
+          '[AnalysisPage] Calling setSelectedHistoryItem(null) from useEffect',
+        );
+        setSelectedHistoryItem(null);
+      }
+    } else {
+      console.log(
+        '[AnalysisPage] selectedHistoryItem is null or undefined in useEffect, not updating results.',
+      );
+    }
+  }, [selectedHistoryItem, setSelectedHistoryItem]);
 
   const handleFileChange = (e) => {
     const selectedFile = e.target.files[0];
     if (selectedFile && selectedFile.type === 'application/pdf') {
       setFile(selectedFile);
+      setCurrentFileName(selectedFile.name);
       setUploadStatus(`Selected: ${selectedFile.name}`);
-      setAnalysisResults(null); // 새 파일 선택 시 이전 결과 초기화
+      setAnalysisResults(null);
       setAnalysisError('');
     } else {
       setFile(null);
+      setCurrentFileName('');
       setUploadStatus('Please select a PDF file.');
-      e.target.value = null; // 잘못된 파일 선택 시 input 초기화
+      e.target.value = null;
     }
   };
 
@@ -37,6 +79,7 @@ function AnalysisPage() {
     }
 
     setIsAnalyzing(true);
+    setCurrentFileName(file.name);
     setUploadStatus('Uploading PDF...');
     setAnalysisError('');
     setAnalysisResults(null);
@@ -52,7 +95,7 @@ function AnalysisPage() {
       setUploadStatus('Processing PDF with Vision AI...');
 
       // 2. Call the Cloud Function to analyze the PDF
-      const terms = await analyzePdfWithCloudFunction(storagePath);
+      const terms = await analyzePdfWithCloudFunction(storagePath, file.name);
 
       if (terms && terms.length > 0) {
         setAnalysisResults(terms);
@@ -84,10 +127,14 @@ function AnalysisPage() {
     <div id="analysis-container">
       {' '}
       {/* main.css의 ID 선택자 활용 */}
-      <h2>Upload PDF to Analyze</h2>
+      <h2>
+        {currentFileName
+          ? `Results for: ${currentFileName}`
+          : 'Upload PDF to Analyze'}
+      </h2>
       <hr style={{ margin: '20px 0' }} />
       <div id="pdf-analysis-section">
-        <label htmlFor="pdfInput">Upload a PDF:</label>
+        <label htmlFor="pdfInput">Upload a PDF to analyze a new file:</label>
         <input
           type="file"
           id="pdfInput"

@@ -1,0 +1,104 @@
+.history-sidebar {
+  position: fixed;
+  top: 0;
+  left: -300px; /* 기본적으로 숨겨진 상태 */
+  width: 300px;
+  height: 100%;
+  background-color: #f9f9f9;
+  box-shadow: 2px 0 5px rgba(0, 0, 0, 0.1);
+  transition: left 0.3s ease-in-out;
+  z-index: 1000;
+  display: flex;
+  flex-direction: column;
+  border-right: 1px solid #ddd;
+}
+
+.history-sidebar.open {
+  left: 0; /* 열린 상태 */
+}
+
+.sidebar-header {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  padding: 15px;
+  background-color: #efefef; /* 헤더 배경색 */
+  border-bottom: 1px solid #ddd;
+}
+
+.sidebar-header h3 {
+  margin: 0;
+  font-size: 1.2em;
+}
+
+.close-btn {
+  background: none;
+  border: none;
+  font-size: 1.8em;
+  cursor: pointer;
+  padding: 0 5px;
+  color: #555;
+}
+
+.close-btn:hover {
+  color: #000;
+}
+
+.sidebar-content {
+  padding: 15px;
+  overflow-y: auto; /* 내용이 많을 경우 스크롤 */
+  flex-grow: 1;
+}
+
+.sidebar-content ul {
+  list-style: none;
+  padding: 0;
+  margin: 0;
+}
+
+.sidebar-content li {
+  padding: 12px 8px;
+  border-bottom: 1px solid #eee;
+  cursor: pointer;
+  transition: background-color 0.2s ease;
+}
+
+.sidebar-content li:hover {
+  background-color: #e9e9e9;
+}
+
+.sidebar-content li:last-child {
+  border-bottom: none;
+}
+
+.history-item-filename {
+  font-weight: bold;
+  font-size: 0.95em;
+  margin-bottom: 4px;
+  color: #333;
+}
+
+.history-item-date {
+  font-size: 0.8em;
+  color: #777;
+  margin-bottom: 4px;
+}
+
+.history-item-terms {
+  font-size: 0.85em;
+  color: #555;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+.error-message {
+  color: red;
+  font-size: 0.9em;
+}
+
+/* 로딩 메시지 등 기타 스타일 */
+.sidebar-content p {
+  margin-top: 10px;
+  color: #555;
+}
