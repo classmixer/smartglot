@@ -40,3 +40,38 @@
 .read-the-docs {
   color: #888;
 }
+
+/* AnalysisPage specific responsive adjustments */
+@media (max-width: 768px) {
+  #pdf-analysis-section {
+    /* 필요시 내부 요소들 flex-direction: column; 등으로 변경 */
+  }
+
+  #pdf-analysis-section label {
+    display: block; /* 레이블을 블록 요소로 만들어 줄바꿈 유도 */
+    margin-bottom: 5px;
+  }
+
+  #pdf-analysis-section input[type='file'] {
+    margin-bottom: 10px; /* 파일 인풋과 버튼 사이 간격 */
+    width: 100%; /* 파일 인풋 너비 확장 */
+    box-sizing: border-box;
+  }
+
+  #analyzePdfButton {
+    width: 100%; /* 버튼 너비 확장 */
+    margin-bottom: 10px; /* 버튼과 상태 메시지 사이 간격 */
+    box-sizing: border-box;
+  }
+
+  #pdf-upload-status {
+    display: block; /* 상태 메시지도 블록 요소로 */
+    text-align: center; /* 가운데 정렬 (선택적) */
+    margin-left: 0; /* 기존 margin-left 제거 */
+    margin-top: 5px;
+  }
+
+  .result-item {
+    padding: 8px 0; /* 결과 아이템 패딩 조정 */
+  }
+}

@@ -71,3 +71,49 @@
 #headerSignupButton {
   /* 기존 스타일 유지 또는 위 .header-nav a 스타일과 통합 */
 }
+
+@media (max-width: 768px) {
+  .app-header {
+    padding: 10px 15px;
+  }
+
+  .logo-link h1 {
+    font-size: 1.5em; /* 모바일에서 로고 폰트 크기 조정 */
+  }
+
+  .sidebar-toggle-btn {
+    font-size: 1.6em;
+    margin-right: 10px;
+  }
+
+  .header-nav a,
+  .logout-button {
+    font-size: 0.9em; /* 네비게이션 링크 폰트 크기 조정 */
+    padding: 5px 8px;
+    margin-left: 8px;
+  }
+}
+
+@media (max-width: 480px) {
+  .logo-link h1 {
+    font-size: 1.3em;
+  }
+
+  .header-nav {
+    /* 매우 작은 화면에서는 네비게이션을 숨기거나 다른 형태로 표시할 수 있음 */
+    /* 예: display: none; 또는 아이콘 버튼으로 대체 */
+    /* 여기서는 일단 폰트만 더 줄여봄 */
+    font-size: 0.95em;
+  }
+
+  .header-nav a,
+  .logout-button {
+    padding: 4px 6px;
+    margin-left: 5px;
+    font-size: 0.85em;
+  }
+
+  .header-left {
+    /* 로고와 토글 버튼만 남기고, 필요시 네비게이션은 다른 곳으로 이동 */
+  }
+}

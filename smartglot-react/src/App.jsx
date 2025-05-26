@@ -1,4 +1,4 @@
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import {
   BrowserRouter as Router,
   Routes,
@@ -21,6 +21,7 @@ const MainLayout = ({
   toggleSidebar,
   setSelectedHistoryItem,
   selectedHistoryItem,
+  mainMarginLeft,
 }) => (
   <>
     <Header onToggleSidebar={toggleSidebar} />
@@ -32,7 +33,7 @@ const MainLayout = ({
     <main
       className="container"
       style={{
-        marginLeft: isSidebarOpen ? '300px' : '0',
+        marginLeft: isSidebarOpen ? mainMarginLeft : '0',
         transition: 'margin-left 0.3s ease-in-out',
       }}
     >
@@ -76,13 +77,29 @@ function PublicRouteOnly() {
 function App() {
   const [isSidebarOpen, setIsSidebarOpen] = useState(false);
   const [selectedHistoryItem, setSelectedHistoryItem] = useState(null);
+  const [mainMarginLeft, setMainMarginLeft] = useState('300px');
 
   const toggleSidebar = () => {
     setIsSidebarOpen(!isSidebarOpen);
   };
 
-  // 로그 추가: setSelectedHistoryItem이 호출될 때마다 이 App 컴포넌트가 리렌더링되고,
-  // selectedHistoryItem의 현재 값을 보여줍니다.
+  useEffect(() => {
+    const handleResize = () => {
+      if (window.innerWidth <= 480) {
+        setMainMarginLeft('100%');
+      } else if (window.innerWidth <= 768) {
+        setMainMarginLeft('280px');
+      } else {
+        setMainMarginLeft('300px');
+      }
+    };
+
+    window.addEventListener('resize', handleResize);
+    handleResize();
+
+    return () => window.removeEventListener('resize', handleResize);
+  }, []);
+
   console.log(
     '[App.jsx] Current selectedHistoryItem state:',
     selectedHistoryItem,
@@ -104,6 +121,7 @@ function App() {
                 toggleSidebar={toggleSidebar}
                 setSelectedHistoryItem={handleSetSelectedHistoryItem}
                 selectedHistoryItem={selectedHistoryItem}
+                mainMarginLeft={mainMarginLeft}
               />
             }
           >
