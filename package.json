@@ -2,7 +2,7 @@
   "name": "smartglot",
   "version": "1.0.0",
   "description": "Static site for Firebase App Hosting",
-  "main": "index.js",
+  "main": "server.js",
   "type": "module",
   "scripts": {
     "start": "node server.js",
