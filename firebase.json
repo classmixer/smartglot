@@ -1,4 +1,7 @@
 {
+  "functions": {
+    "source": "functions"
+  },
   "apphosting": {
     "backend": "smartglot",
     "region": "asia-east1",

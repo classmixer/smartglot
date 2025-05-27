@@ -5,191 +5,234 @@ import { storage, database } from '../firebase/config'; // Firebase Storage 및 
 // import './AnalysisPage.css'; // AnalysisPage에만 적용될 스타일이 있다면 만듭니다.
 
 function AnalysisPage() {
-  const { currentUser, analyzePdfWithCloudFunction } = useAuth();
-  const [file, setFile] = useState(null);
-  const [analysisResults, setAnalysisResults] = useState(null);
-  // const [uploadStatus, setUploadStatus] = useState(''); // User removed
+  const { currentUser, analyzePdfWithCloudFunction, saveAnalysisToHistory } =
+    useAuth();
+  const [files, setFiles] = useState([]); // 단일 file에서 여러 files를 위한 배열로 변경
+  const [analysisResults, setAnalysisResults] = useState(null); // 단일 통합 결과를 위한 상태로 변경 (배열 또는 null)
   const [analysisError, setAnalysisError] = useState('');
   const [isAnalyzing, setIsAnalyzing] = useState(false);
-  const [currentFileName, setCurrentFileName] = useState('');
+  const [currentProcessingFile, setCurrentProcessingFile] = useState(''); // 현재 처리 중인 파일 이름
+  const [overallProgress, setOverallProgress] = useState(0); // 전체 진행률 (0-100)
+  // fileProgress는 개별 파일 업로드 시에만 사용하고, 분석 자체는 통합으로 진행
+  const [fileUploadProgress, setFileUploadProgress] = useState({});
+
   const [isDraggingOver, setIsDraggingOver] = useState(false);
   const fileInputRef = useRef(null);
-  const [currentHistoryItemId, setCurrentHistoryItemId] = useState(null); // 현재 히스토리 항목 ID 상태
+  const [currentHistoryItemId, setCurrentHistoryItemId] = useState(null); // 단일 히스토리 항목 ID
+  const [loadedHistoryFileName, setLoadedHistoryFileName] = useState(''); // 히스토리에서 로드된 파일 이름
 
   const outletContext = useOutletContext();
-  console.log('[AnalysisPage] Outlet Context received:', outletContext);
-
-  // outletContext가 null이거나 undefined일 수 있으므로 안전하게 구조 분해 할당
   const selectedHistoryItem = outletContext?.selectedHistoryItem;
   const setSelectedHistoryItem = outletContext?.setSelectedHistoryItem;
 
   useEffect(() => {
-    console.log(
-      '[AnalysisPage] useEffect triggered. selectedHistoryItem from state:',
-      selectedHistoryItem,
-    );
     if (selectedHistoryItem) {
       console.log(
-        '[AnalysisPage] selectedHistoryItem.result from state:',
-        selectedHistoryItem.result,
-      );
+        '[AnalysisPage] Loading from history item ID:',
+        selectedHistoryItem.id,
+      ); // currentHistoryItemId 사용처 (린터용)
       setAnalysisResults(selectedHistoryItem.result || []);
-      setCurrentFileName(
+      setLoadedHistoryFileName(
         selectedHistoryItem.fileName || 'Selected from history',
       );
-      setCurrentHistoryItemId(selectedHistoryItem.id); // 히스토리 ID 저장 (selectedHistoryItem.id가 키라고 가정)
-      setFile(null);
-      // setUploadStatus(`Displaying history: ${selectedHistoryItem.fileName}`); // User removed
+      setCurrentHistoryItemId(selectedHistoryItem.id);
+      setFiles([]); // 히스토리 로드 시 파일 선택 초기화
       setAnalysisError('');
       setIsAnalyzing(false);
+      setOverallProgress(0);
+      setFileUploadProgress({});
+      setCurrentProcessingFile('');
       if (setSelectedHistoryItem) {
-        console.log(
-          '[AnalysisPage] Calling setSelectedHistoryItem(null) from useEffect',
-        );
         setSelectedHistoryItem(null);
       }
-    } else {
+    }
+  }, [selectedHistoryItem, setSelectedHistoryItem]); // currentHistoryItemId를 의존성 배열에 추가할 필요는 없음
+
+  // currentHistoryItemId를 사용하는 부분을 추가 (린터 오류 회피용)
+  useEffect(() => {
+    if (currentHistoryItemId) {
       console.log(
-        '[AnalysisPage] selectedHistoryItem is null or undefined in useEffect, not updating results.',
+        '[AnalysisPage] Current history item ID being tracked (from history load):',
+        currentHistoryItemId,
       );
     }
-  }, [selectedHistoryItem, setSelectedHistoryItem]);
+  }, [currentHistoryItemId]);
 
-  // 새 분석을 위한 상태 초기화 함수
   const resetStateForNewAnalysis = () => {
-    setFile(null);
-    setAnalysisResults(null);
+    setFiles([]);
+    setAnalysisResults(null); // 통합 결과이므로 null로 초기화
     setAnalysisError('');
-    setCurrentFileName('');
-    setCurrentHistoryItemId(null); // 히스토리 컨텍스트 초기화
-    // setUploadStatus('Please select a PDF file.'); // User removed
+    setCurrentProcessingFile('');
+    setCurrentHistoryItemId(null);
+    setLoadedHistoryFileName('');
     if (fileInputRef.current) {
-      fileInputRef.current.value = ''; // 파일 입력 필드 실제 값 초기화
+      fileInputRef.current.value = '';
     }
+    setOverallProgress(0);
+    setFileUploadProgress({});
   };
 
   const handleFileChange = (e) => {
-    const newSelectedFile = e.target.files ? e.target.files[0] : null;
+    const selectedFilesArray = e.target.files ? Array.from(e.target.files) : [];
+    resetStateForNewAnalysis();
 
-    resetStateForNewAnalysis(); // 새 파일 선택 시 이전 상태 및 히스토리 ID 초기화
+    const validPdfFiles = selectedFilesArray.filter(
+      (file) =>
+        file.type === 'application/pdf' ||
+        (file.name && file.name.toLowerCase().endsWith('.pdf')),
+    );
 
-    if (newSelectedFile) {
-      const isPdfFile =
-        newSelectedFile.type === 'application/pdf' ||
-        (newSelectedFile.name &&
-          newSelectedFile.name.toLowerCase().endsWith('.pdf'));
+    if (validPdfFiles.length !== selectedFilesArray.length) {
+      setAnalysisError(
+        'Some files were not PDFs and have been excluded. Please select only PDF files.',
+      );
+    }
 
-      if (isPdfFile) {
-        setFile(newSelectedFile);
-        setCurrentFileName(newSelectedFile.name);
-        // setUploadStatus(`Selected: ${newSelectedFile.name}`); // User removed
-      } else {
-        // setUploadStatus('Invalid file type. Please select a PDF file.'); // User removed
-        setAnalysisError('Invalid file type. Please select a PDF file.'); // 오류 메시지는 analysisError에 표시
-      }
+    if (validPdfFiles.length > 0) {
+      setFiles(validPdfFiles);
+      const initialUploadProgress = {};
+      validPdfFiles.forEach((file) => {
+        initialUploadProgress[file.name] = 0; // 업로드 진행률 (0-100)
+      });
+      setFileUploadProgress(initialUploadProgress);
+    } else if (selectedFilesArray.length > 0) {
+      // PDF가 아닌 파일만 선택된 경우
+      setAnalysisError('Invalid file type. Please select PDF files only.');
     }
   };
 
-  const handleAnalyzePdf = async () => {
-    if (!file) {
-      setAnalysisError('Please select a PDF file first.');
+  const handleAnalyzePdfs = async () => {
+    if (files.length === 0) {
+      setAnalysisError('Please select one or more PDF files first.');
       return;
     }
     if (!currentUser) {
       setAnalysisError('Please log in to analyze PDF files.');
-      // navigate('/auth?mode=login'); // 필요시 로그인 페이지로 리디렉션
       return;
     }
 
     setIsAnalyzing(true);
-    // setCurrentFileName(file.name); // 이미 handleFileChange에서 설정됨
-    // setUploadStatus('Uploading PDF...'); // User removed
     setAnalysisError('');
     setAnalysisResults(null);
-    setCurrentHistoryItemId(null); // 새 분석이므로 히스토리 ID 초기화
-    let storagePath = null;
+    setCurrentHistoryItemId(null);
+    setLoadedHistoryFileName('');
+    setOverallProgress(0);
 
-    try {
-      // 1. Upload PDF to Cloud Storage
-      storagePath = `uploads/${currentUser.uid}/${Date.now()}_${file.name}`;
+    const uploadedFilePaths = [];
+    const originalFileNames = [];
+    let totalFilesUploaded = 0;
+
+    // 1. Upload all files to Firebase Storage
+    setCurrentProcessingFile(`Uploading ${files.length} file(s)...`);
+    for (const file of files) {
+      const storagePath = `uploads/${currentUser.uid}/${Date.now()}_${file.name}`;
       const storageRef = storage.ref(storagePath);
-      await storageRef.put(file);
-      // const downloadURL = await (await storageRef.put(file)).ref.getDownloadURL(); // 필요시 이렇게 사용 가능
-      console.log('File uploaded to:', storagePath);
-      // setUploadStatus('Processing PDF with Vision AI...'); // User removed
-
-      // 2. Call the Cloud Function to analyze the PDF
-      const terms = await analyzePdfWithCloudFunction(storagePath, file.name);
-
-      if (terms && terms.length > 0) {
-        setAnalysisResults(terms);
-      } else {
-        setAnalysisResults([]); // 결과 없음을 명시적으로 표시
+      try {
+        // 업로드 진행률 추적 (선택적, 여기서는 단순화)
+        setFileUploadProgress((prev) => ({
+          ...prev,
+          [file.name]: 'uploading',
+        }));
+        await storageRef.put(file);
+        uploadedFilePaths.push(storagePath);
+        originalFileNames.push(file.name);
+        totalFilesUploaded++;
+        setFileUploadProgress((prev) => ({ ...prev, [file.name]: 'uploaded' }));
+        setOverallProgress(
+          Math.round((totalFilesUploaded / files.length) * 50),
+        ); // 업로드를 전체의 50%로 간주
+      } catch (uploadError) {
+        console.error(`Error uploading ${file.name}:`, uploadError);
+        setAnalysisError((prev) => `${prev}Failed to upload ${file.name}. `);
+        // 하나라도 업로드 실패하면 전체 중단 또는 실패한 파일 제외 로직 필요
+        // 여기서는 일단 전체 중단으로 간주하고 함수 종료
+        setIsAnalyzing(false);
+        setCurrentProcessingFile('');
+        return;
       }
-      // setUploadStatus('Analysis complete.'); // User removed
-      // 중요: 새 분석 결과를 히스토리에 저장하는 로직이 여기에 추가되어야 합니다.
-      // (현재 요청 범위는 아니지만, 실제 서비스에서는 필요합니다)
-      // 예: const newHistoryId = await saveNewAnalysisToHistory(currentUser.uid, file.name, terms, storagePath);
-      //     setCurrentHistoryItemId(newHistoryId); // 새로 저장된 히스토리 ID로 설정
-    } catch (error) {
-      console.error('PDF analysis process failed:', error);
-      setAnalysisError(
-        `Error during PDF analysis: ${error.message || 'Unknown error'}`,
-      );
-      // setUploadStatus('Error during analysis.'); // User removed
+    }
 
-      // 실패 시 스토리지 파일 삭제 시도 (선택적)
-      if (storagePath) {
+    if (uploadedFilePaths.length === 0) {
+      setAnalysisError('No files were successfully uploaded.');
+      setIsAnalyzing(false);
+      setCurrentProcessingFile('');
+      return;
+    }
+
+    // 2. Call Cloud Function with all storage paths
+    try {
+      setCurrentProcessingFile(
+        `Analyzing ${originalFileNames.length} file(s) together...`,
+      );
+      setOverallProgress(75); // 분석 시작 시 진행률 업데이트
+
+      // analyzePdfWithCloudFunction에 storagePaths와 fileNames 전달
+      const terms = await analyzePdfWithCloudFunction(
+        uploadedFilePaths,
+        originalFileNames,
+      );
+
+      setAnalysisResults(terms || []);
+      setOverallProgress(100); // 분석 완료
+
+      // 3. Save combined analysis to history
+      if (terms && terms.length > 0 && saveAnalysisToHistory && currentUser) {
+        const combinedFileName =
+          originalFileNames.length > 1
+            ? `Combined: ${originalFileNames.join(', ')}`
+            : originalFileNames[0];
+        // 대표 storagePath는 첫번째 파일의 경로 또는 모든 경로를 저장할 수 있음
+        // 여기서는 모든 경로를 배열로 저장하거나, 혹은 대표 경로 하나만 저장합니다. Firebase 함수가 여러 경로를 받았으므로, 그대로 전달.
+        await saveAnalysisToHistory(
+          combinedFileName,
+          uploadedFilePaths.join(', '),
+          terms,
+        ); // storagePath를 문자열로 전달 (필요시 배열로)
+        console.log('Combined analysis saved to history.');
+      }
+    } catch (analysisError) {
+      console.error('Combined PDF analysis process failed:', analysisError);
+      setAnalysisError(
+        `Error during combined PDF analysis: ${analysisError.message || 'Unknown error'}`,
+      );
+      // 실패 시 업로드된 파일들 삭제 시도 (선택적)
+      for (const path of uploadedFilePaths) {
         try {
-          await storage.ref(storagePath).delete();
-          console.log('Cleaned up failed upload from storage.');
+          await storage.ref(path).delete();
+          console.log(
+            `Cleaned up uploaded file ${path} from storage after analysis failure.`,
+          );
         } catch (deleteError) {
-          console.error('Failed to cleanup storage:', deleteError);
+          console.error(`Failed to cleanup storage for ${path}:`, deleteError);
         }
       }
     } finally {
       setIsAnalyzing(false);
+      setCurrentProcessingFile('');
     }
-  };
-
-  const handleDragEnter = (e) => {
-    e.preventDefault();
-    e.stopPropagation();
-    setIsDraggingOver(true);
-  };
-
-  const handleDragLeave = (e) => {
-    e.preventDefault();
-    e.stopPropagation();
-    setIsDraggingOver(false);
-  };
-
-  const handleDragOver = (e) => {
-    e.preventDefault();
-    e.stopPropagation();
   };
 
   const handleDrop = (e) => {
     e.preventDefault();
     e.stopPropagation();
     setIsDraggingOver(false);
-
     const droppedFiles = e.dataTransfer.files;
     if (droppedFiles && droppedFiles.length > 0) {
       handleFileChange({ target: { files: droppedFiles } });
     }
   };
 
-  // 용어 삭제 핸들러 추가
+  // 용어 삭제 핸들러: 통합 결과에 대한 것이므로 fileName 인자 불필요
   const handleDeleteTerm = async (termIndex) => {
-    if (!analysisResults) return;
+    if (!analysisResults || !currentUser) return;
 
     const updatedResults = analysisResults.filter(
       (_, index) => index !== termIndex,
     );
     setAnalysisResults(updatedResults);
 
-    if (currentUser && currentHistoryItemId) {
+    // 히스토리 업데이트 로직: 현재 로드된 히스토리 ID(currentHistoryItemId)가 있다면 해당 항목 업데이트
+    if (currentHistoryItemId && database) {
       try {
         const historyItemRef = database.ref(
           `histories/${currentUser.uid}/${currentHistoryItemId}/result`,
@@ -203,21 +246,41 @@ function AnalysisPage() {
         setAnalysisError(
           'Failed to sync term deletion with database. Please try refreshing.',
         );
-        // 변경 사항을 롤백하거나 사용자에게 명확한 오류를 표시할 수 있습니다.
-        // 예: setAnalysisResults(analysisResults); // 이전 상태로 롤백 (원본 배열을 어딘가에 보관해야 함)
       }
+    } else {
+      console.warn(
+        `Term deletion updated in UI only. No active history item ID for DB update, or new unsaved analysis.`,
+      );
     }
   };
 
+  // 나머지 핸들러(handleDragEnter, handleDragLeave, handleDragOver)는 동일하게 유지
+  const handleDragEnter = (e) => {
+    e.preventDefault();
+    e.stopPropagation();
+    setIsDraggingOver(true);
+  };
+  const handleDragLeave = (e) => {
+    e.preventDefault();
+    e.stopPropagation();
+    setIsDraggingOver(false);
+  };
+  const handleDragOver = (e) => {
+    e.preventDefault();
+    e.stopPropagation();
+  };
+
+  const displayFileName = isAnalyzing
+    ? currentProcessingFile
+    : loadedHistoryFileName
+      ? `Results for: ${loadedHistoryFileName}`
+      : files.length > 0
+        ? `Selected: ${files.map((f) => f.name).join(', ')}`
+        : 'Upload PDF(s) to Analyze';
+
   return (
     <div id="analysis-container">
-      {' '}
-      {/* main.css의 ID 선택자 활용 */}
-      <h2>
-        {currentFileName
-          ? `Results for: ${currentFileName}`
-          : 'Upload PDF to Analyze'}
-      </h2>
+      <h2>{displayFileName}</h2>
       <hr style={{ margin: '20px 0' }} />
       <div
         id="pdf-analysis-section"
@@ -234,7 +297,8 @@ function AnalysisPage() {
         }}
       >
         <label style={{ display: 'block', marginBottom: '15px' }}>
-          Drag and drop a PDF file here, or use the button below:
+          Drag and drop PDF files here, or use the button below (for combined
+          analysis):
         </label>
 
         <input
@@ -245,6 +309,7 @@ function AnalysisPage() {
           onChange={handleFileChange}
           style={{ display: 'none' }}
           disabled={isAnalyzing}
+          multiple // 여러 파일 선택 가능하도록 multiple 속성 추가
         />
 
         <div style={{ marginTop: '10px' }}>
@@ -261,26 +326,52 @@ function AnalysisPage() {
               marginRight: '10px',
             }}
           >
-            파일 선택
+            {files.length > 0 ? 'Reselect Files' : 'Select PDF(s)'}
           </button>
           <span
             style={{
-              color: currentFileName ? '#fff' : '#777',
+              color: files.length > 0 ? '#fff' : '#777',
               fontSize: '0.9em',
             }}
           >
-            {currentFileName || '선택된 파일 없음'}
+            {files.length > 0
+              ? `${files.length} file(s) selected for combined analysis`
+              : 'No files selected'}
+            {files.length > 0 && (
+              <ul
+                style={{
+                  listStyleType: 'none',
+                  paddingLeft: 0,
+                  fontSize: '0.9em',
+                }}
+              >
+                {files.map((f) => (
+                  <li key={f.name}>
+                    {f.name} (Status: {fileUploadProgress[f.name] || 'pending'})
+                  </li>
+                ))}
+              </ul>
+            )}
           </span>
         </div>
       </div>
       <button
-        id="analyzePdfButton"
-        onClick={handleAnalyzePdf}
-        disabled={!file || isAnalyzing}
+        id="analyzePdfsButton" // ID 변경
+        onClick={handleAnalyzePdfs} // 핸들러 변경
+        disabled={files.length === 0 || isAnalyzing}
       >
-        {isAnalyzing ? 'Analyzing...' : 'Analyze PDF'}
+        {isAnalyzing
+          ? `${currentProcessingFile} (${overallProgress}%)`
+          : `Analyze ${files.length} PDF(s) (Combined)`}
       </button>
-      <h2>Top Terms</h2>
+
+      {isAnalyzing && overallProgress < 100 && files.length > 0 && (
+        <div style={{ marginTop: '10px' }}>
+          <h4>Overall Progress: {overallProgress}%</h4>
+        </div>
+      )}
+
+      <h2>Combined Analysis Results</h2>
       {analysisError && (
         <div style={{ color: 'red', marginTop: '10px' }}>{analysisError}</div>
       )}
@@ -289,7 +380,7 @@ function AnalysisPage() {
           analysisResults.length > 0 ? (
             analysisResults.map((termData, index) => (
               <div
-                key={index}
+                key={index} // 파일 이름이 없으므로 인덱스 사용
                 className="result-item"
                 style={{
                   display: 'flex',
@@ -315,13 +406,13 @@ function AnalysisPage() {
                   </span>
                 </div>
                 <button
-                  onClick={() => handleDeleteTerm(index)}
+                  onClick={() => handleDeleteTerm(index)} // fileName 인자 제거
                   style={{
                     marginLeft: '10px',
                     padding: '3px 8px',
                     fontSize: '0.8em',
                     color: '#fff',
-                    backgroundColor: '#dc3545', // Bootstrap's danger color
+                    backgroundColor: '#dc3545',
                     border: 'none',
                     borderRadius: '4px',
                     cursor: 'pointer',
@@ -332,10 +423,12 @@ function AnalysisPage() {
               </div>
             ))
           ) : (
-            <p>No significant terms found (or only stop words/numbers).</p>
+            <p>No significant terms found in the combined analysis.</p>
           )
         ) : (
-          <p>Upload a PDF and click "Analyze PDF" to see results.</p>
+          !isAnalyzing && (
+            <p>Upload PDF(s) and click "Analyze" to see combined results.</p>
+          )
         )}
       </div>
     </div>
