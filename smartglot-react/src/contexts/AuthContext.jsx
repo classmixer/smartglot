@@ -136,16 +136,26 @@ export function AuthProvider({ children }) {
   }
 
   // PDF 분석 함수 호출 (Firebase Functions)
-  async function analyzePdfWithCloudFunction(storagePath, originalFileName) {
+  async function analyzePdfWithCloudFunction(storagePaths, fileNames) {
     if (!currentUser) throw new Error('User not logged in for PDF analysis.');
+    if (
+      !storagePaths ||
+      !Array.isArray(storagePaths) ||
+      storagePaths.length === 0
+    ) {
+      throw new Error('storagePaths (array) is required.');
+    }
+    if (
+      !fileNames ||
+      !Array.isArray(fileNames) ||
+      fileNames.length !== storagePaths.length
+    ) {
+      throw new Error('fileNames (array) must match storagePaths.');
+    }
+
     try {
       const analyzePdfFunction = functions.httpsCallable('analyzePdf');
-      const result = await analyzePdfFunction({ storagePath });
-
-      // 분석 성공 시 기록 저장
-      if (result.data && result.data.length > 0) {
-        await saveAnalysisToHistory(originalFileName, storagePath, result.data);
-      }
+      const result = await analyzePdfFunction({ storagePaths, fileNames });
 
       return result.data;
     } catch (error) {
