@@ -1,3 +1,4 @@
 .env
 node_modules
 smartglot-react/dist/
+serviceAccountKey.json
