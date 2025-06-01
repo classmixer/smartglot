@@ -208,6 +208,27 @@ export function AuthProvider({ children }) {
     }
   }
 
+  // 새로운 함수: 히스토리 제목 업데이트
+  async function updateHistoryTitle(historyId, newTitle) {
+    if (!currentUser || !historyId || typeof newTitle !== 'string') {
+      console.error('Invalid arguments for updateHistoryTitle');
+      throw new Error('Invalid arguments for updating history title.');
+    }
+    try {
+      const historyItemRef = database.ref(
+        `histories/${currentUser.uid}/${historyId}/fileName`,
+      );
+      await historyItemRef.set(newTitle);
+      console.log(`History title updated for ${historyId} to "${newTitle}"`);
+      // 성공 시, 상태를 업데이트하거나 UI에 알릴 필요가 있다면 추가 로직 구현
+      // 예를 들어, HistorySidebar에서 로컬 상태를 업데이트하거나,
+      // 전역 상태 관리 시스템(예: Context API 또는 Redux)을 사용한다면 해당 상태를 업데이트
+    } catch (e) {
+      console.error('Failed to update history title in Firebase:', e);
+      throw e; // 오류를 호출한 컴포넌트로 전파
+    }
+  }
+
   useEffect(() => {
     const unsubscribe = auth.onAuthStateChanged(async (user) => {
       setError(null); // 상태 변경 시 이전 에러 초기화
@@ -254,6 +275,7 @@ export function AuthProvider({ children }) {
     analyzePdfWithCloudFunction,
     saveAnalysisToHistory,
     getAnalysisHistory,
+    updateHistoryTitle,
   };
 
   return (

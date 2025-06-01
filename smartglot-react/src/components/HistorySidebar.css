@@ -103,6 +103,82 @@
   color: #555;
 }
 
+/* 제목 변경 입력 필드 및 버튼 스타일 */
+.edit-title-section {
+  display: flex;
+  flex-direction: column; /* 입력 필드와 버튼들을 세로로 배치 */
+  gap: 8px; /* 요소들 사이의 간격 */
+  margin-bottom: 8px; /* 아래쪽 여백 */
+}
+
+.edit-title-section input[type='text'] {
+  padding: 8px;
+  border: 1px solid #ccc;
+  border-radius: 4px;
+  font-size: 0.9em;
+}
+
+.edit-title-section .save-title-btn,
+.edit-title-section .cancel-title-btn {
+  padding: 6px 10px;
+  border: none;
+  border-radius: 4px;
+  cursor: pointer;
+  font-size: 0.85em;
+}
+
+.edit-title-section .save-title-btn {
+  background-color: #28a745; /* 초록색 계열 */
+  color: white;
+}
+
+.edit-title-section .cancel-title-btn {
+  background-color: #6c757d; /* 회색 계열 */
+  color: white;
+}
+
+.edit-title-section .error-message.edit-error {
+  font-size: 0.8em;
+  margin-top: 4px;
+}
+
+/* 파일명과 아이콘 버튼을 담는 컨테이너 */
+.history-item-filename-container {
+  display: flex;
+  align-items: center; /* 세로 중앙 정렬 */
+  justify-content: space-between; /* 파일명과 버튼을 양 끝으로 */
+  margin-bottom: 4px;
+}
+
+.history-item-filename {
+  font-weight: bold;
+  font-size: 0.95em;
+  color: #333;
+  flex-grow: 1; /* 파일명이 남은 공간을 채우도록 */
+  margin-right: 8px; /* 아이콘과의 간격 */
+}
+
+/* 아이콘 버튼 스타일 */
+.edit-title-icon-btn {
+  background: none;
+  border: none;
+  padding: 0;
+  cursor: pointer;
+  display: flex; /* 아이콘을 정렬하기 위해 */
+  align-items: center;
+  justify-content: center;
+}
+
+.edit-icon {
+  width: 16px; /* 아이콘 크기 조절 */
+  height: 16px; /* 아이콘 크기 조절 */
+  fill: #555; /* 아이콘 색상 (SVG fill 속성 제어 가능하도록) */
+}
+
+.edit-title-icon-btn:hover .edit-icon {
+  fill: #000; /* 호버 시 아이콘 색상 변경 */
+}
+
 @media (max-width: 768px) {
   .history-sidebar {
     width: 280px; /* 모바일에서 사이드바 너비 약간 줄이기 */
